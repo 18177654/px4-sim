@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <signal.h>
 #include <unistd.h>
+#include <math.h>
 
 #include "quad_parameters.h"
 #include "utils.h"
@@ -155,26 +156,26 @@ void testQuadDynamics()
     // for(i = 0 ; i < 3 ; i++)
     //     wind_vel_e[i] = 0.0f;
     
-    // thrust_commands[0] = 0.3 * 0.5 * 15 * GRAVITY;
-    // thrust_commands[1] = 0.6 * 0.5 * 15 * GRAVITY;
-    // thrust_commands[2] = 0.7 * 0.5 * 15 * GRAVITY;
-    // thrust_commands[3] = 0.6 * 0.5 * 15 * GRAVITY;
+    // thrust_commands[0] = 0.3 * (0.5 * MASS * GRAVITY);
+    // thrust_commands[1] = 0.6 * (0.5 * MASS * GRAVITY);
+    // thrust_commands[2] = 0.7 * (0.5 * MASS * GRAVITY);
+    // thrust_commands[3] = 0.6 * (0.5 * MASS * GRAVITY);
 
     // Initialise forces and moments
     forces[0] = 1;
-    forces[1] = 2;
+    forces[1] = 0;
     forces[2] = 3;
 
-    moments[0] = 4;
-    moments[1] = 5;
-    moments[2] = 6;
+    moments[0] = 0;
+    moments[1] = 2;
+    moments[2] = 0;
 
     while(sim_time <= stop_time)
     {
-        // update_quad(&quad, thrust_commands, wind_vel_e, (double)(1.0 / SENSOR_FREQ));
+        // update_quad(&quad, thrust_commands, wind_vel_e, dt);
+        // printStates(&quad);
         // printSensors(&quad);
 
-        printf("t: %f\n", sim_time);
         six_dof(dt, &quad, forces, moments);
         printStates(&quad);
 
@@ -209,7 +210,7 @@ void printStates(Quad *quad)
 
     printf("Euler:\n");
     for(i = 0 ; i < 3 ; i++)
-        printf("%4.9f\t", quad->state.euler[i]);
+        printf("%4.9f\t", quad->state.euler[i] * (180.0 / M_PI));
     printf("\n");
 
     printf("Velocity (earth):\n");

@@ -129,11 +129,11 @@ double wrap_angle_pi(double angle)
         return angle;
 
     // Wrap between 0 and 2pi.
-    wrapped = wrap_angle_2pi(wrapped);
+    wrapped = wrap_angle_2pi(angle);
 
     // Make sure wrapped angle is between pi and -pi
     if(wrapped > M_PI)
-        wrapped -= (2*M_PI);
+        wrapped = wrapped - (2.0*M_PI);
 
     return wrapped;
 }
