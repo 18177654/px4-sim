@@ -944,10 +944,10 @@ int send_hil_messages(uint64_t time_usec, double q[4], double euler_rates[3], do
     static uint64_t hil_gps_update = 0;
 
     int ret = 1;
-    // if(hil_state_freq > 0 && time_usec - hil_state_update >= HIL_MSG_TIME_ERROR)
+    // if(hil_state_freq > 0 && (int64_t)(time_usec - hil_state_update) >= HIL_MSG_TIME_ERROR)
     // {
     //     ret = send_hil_state(time_usec, q, euler_rates, lat_lon_alt, vel_e, acc_b);
-    //     hil_state_update = time_usec + (1000000.0 / hil_state_freq);
+    //     hil_state_update = time_usec + (uint64_t)(1000000.0 / hil_state_freq);
     // }
     if(ret > 0 && time_usec >= time_usec_start + hil_sensor_startup_delay * 1000 && (int64_t)(time_usec - hil_sensor_update) >= HIL_MSG_TIME_ERROR)
     {

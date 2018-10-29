@@ -49,10 +49,12 @@ void init_quad(Quad *quad, double mass, double inertia[3], double d, double r_d,
         quad->inertia[i] = inertia[i];
         quad->c_d[i] = c_d[i];
 
+        quad->state.acc_e[i] = 0.0f;
         quad->state.acc_b[i] = 0.0f;
         quad->state.vel_b[i] = 0.0f;
         quad->state.vel_e[i] = 0.0f;
         quad->state.pos_e[i] = 0.0f;
+        quad->state.alpha_b[i] = 0.0f;
         quad->state.omega_b[i] = 0.0f;
         quad->state.euler_rates[i] = 0.0f;
         quad->state.euler[i] = 0.0f;
@@ -117,6 +119,11 @@ void six_dof(double dt, Quad *quad, double forces[3], double moments[3])
     quad_state->euler_rates[1] = theta_dot(integ_uvwpqr_euler_ned, len);
     quad_state->euler_rates[2] = psi_dot(integ_uvwpqr_euler_ned, len);
 
+    // Calculate and store body angular acceleration.
+    quad_state->alpha_b[0] = p_dot(integ_uvwpqr_euler_ned, len);
+    quad_state->alpha_b[1] = q_dot(integ_uvwpqr_euler_ned, len);
+    quad_state->alpha_b[2] = r_dot(integ_uvwpqr_euler_ned, len);
+
     // Calculate and store the DCM and rotate body velocity to earth velocity.
     calc_dcm_be(quad_state->euler, quad_state->dcm_be);
     body_to_earth_rotation(quad_state->dcm_be, quad_state->vel_b, quad_state->vel_e);
@@ -125,6 +132,7 @@ void six_dof(double dt, Quad *quad, double forces[3], double moments[3])
     quad_state->acc_b[0] = u_dot(integ_uvwpqr_euler_ned, len);
     quad_state->acc_b[1] = v_dot(integ_uvwpqr_euler_ned, len);
     quad_state->acc_b[2] = w_dot(integ_uvwpqr_euler_ned, len);
+    body_to_earth_rotation(quad_state->dcm_be, quad_state->acc_b, quad_state->acc_e);
 }
 
 void forces_moments_aerodynamic_model(Quad *quad, double wind_vel_e[3], double forces[], double moments[])

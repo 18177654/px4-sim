@@ -8,9 +8,11 @@
 typedef struct
 {
     double acc_b[3]; // Udot, Vdot, Wdot (m/(s^2))
+    double acc_e[3]; // Ndotdot, Edotdot, Ddotdot (m/(s^2))
     double vel_b[3]; // U, V, W (m/s)
-    double vel_e[3]; // Ndot, Edot, Ndot (m/s)
+    double vel_e[3]; // Ndot, Edot, Ddot (m/s)
     double pos_e[3]; // N, E, D (m)
+    double alpha_b[3]; // Pdot, Qdot, Rdot (rad/(s^2))
     double omega_b[3]; // P, Q, R (rad/s)
     double euler_rates[3]; // phi_dot, theta_dot, psi_dot (rad/s)
     double euler[3]; // phi, theta, psi (rad)

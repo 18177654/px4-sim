@@ -64,59 +64,59 @@ int advance_sim(uint64_t time_usec, double dt, double wind_vel_e[3])
 
 int main()
 {
-    // int i;
-    // double dt;
-    // uint64_t cur_time;
-    // uint64_t prev_time;
-    // uint64_t sensor_update;
-    // double wind_vel_e[3];
-    // int result;
-    // double excess_time;
+    int i;
+    double dt;
+    uint64_t cur_time;
+    uint64_t prev_time;
+    uint64_t sensor_update;
+    double wind_vel_e[3];
+    int result;
+    double excess_time;
 
-    // signal(SIGINT, sighandler); // Exit simulation if Ctrl-C is pressed
+    signal(SIGINT, sighandler); // Exit simulation if Ctrl-C is pressed
 
-    // // Connect to PX4 and initialize physics sim
-    // printf("Connecting to PX4...\n");
-    // result = init_sim();
-    // if(result < 0)
-    // {
-    //     printf("Failed! Result: %d\n", result);
-    //     return 0;
-    // }
-    // printf("Connected!\n");
+    // Connect to PX4 and initialize physics sim
+    printf("Connecting to PX4...\n");
+    result = init_sim();
+    if(result < 0)
+    {
+        printf("Failed! Result: %d\n", result);
+        return 0;
+    }
+    printf("Connected!\n");
 
-    // // Initialise variables
-    // cur_time = get_time_usec();
-    // prev_time = cur_time;
-    // sensor_update = cur_time;
+    // Initialise variables
+    cur_time = get_time_usec();
+    prev_time = cur_time;
+    sensor_update = cur_time;
 
-    // for(i = 0 ; i < 3 ; i++)
-    //     wind_vel_e[i] = 0.0f;
+    for(i = 0 ; i < 3 ; i++)
+        wind_vel_e[i] = 0.0f;
 
-    // // Loop
-    // while(true)
-    // {
-    //     // Update the physics sim with a fixed time
-    //     cur_time = get_time_usec();
-    //     if((int64_t)(cur_time - sensor_update) >= 0)
-    //     {
-    //         dt = (double)((cur_time - prev_time) * 1e-6);
-    //         printf("dt: %2.3f ms\n", dt * 1e3);
-    //         advance_sim(cur_time, dt, wind_vel_e);
-    //         prev_time = cur_time;
+    // Loop
+    while(true)
+    {
+        // Update the physics sim with a fixed time
+        cur_time = get_time_usec();
+        if((int64_t)(cur_time - sensor_update) >= 0)
+        {
+            dt = (double)((cur_time - prev_time) * 1e-6);
+            // printf("dt: %2.3f ms\n", dt * 1e3);
+            advance_sim(cur_time, dt, wind_vel_e);
+            prev_time = cur_time;
 
-    //         // Calculate next time the physics sim should update
-    //         sensor_update = cur_time + (uint64_t)(1000000.0 / SENSOR_FREQ);
-    //     }
+            // Calculate next time the physics sim should update
+            sensor_update = cur_time + (uint64_t)(1000000.0 / SENSOR_FREQ);
+        }
         
-    //     // Poll for MAVLink messages: receive actuator controls from PX4 and when in HIL - send messages from autopilo to GCS and vice-versa.
-    //     result = pollMavlinkMessage();
-    //     if(result < 0)
-    //         return result;
-    //     usleep(10); // 10 us
-    // }
+        // Poll for MAVLink messages: receive actuator controls from PX4 and when in HIL - send messages from autopilo to GCS and vice-versa.
+        result = pollMavlinkMessage();
+        if(result < 0)
+            return result;
+        usleep(10); // 10 us
+    }
 
-    testQuadDynamics();
+    // testQuadDynamics();
     return 0;
 }
 
