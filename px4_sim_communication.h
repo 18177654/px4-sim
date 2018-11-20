@@ -26,7 +26,7 @@ mavlink_message_t message; // Last read message
 int init_px4_sim(uint16_t sensor_freq, uint16_t gps_freq, int hil_enabled, float thrust_hover_norm, float max_thrust_force);
 void disconnect_sim();
 
-int send_hil_messages(uint64_t time_usec, double q[4], double euler_rates[3], double lat_lon_alt[3], double vel_e[3], double vel, double cog, double eph, double epv, int fix_type, int num_sats, double acc_b[3], double gyro[3], double mag[3], double pressure, double temperature);
+int send_hil_messages(uint64_t time_usec, double q[4], double lat_lon_alt[3], double vel_e[3], double vel, double cog, double eph, double epv, int fix_type, int num_sats, double acc_b[3], double gyro[3], double mag[3], double pressure, double temperature);
 
 int pollMavlinkMessage();
 

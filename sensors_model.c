@@ -25,15 +25,15 @@ void update_gps(GpsSensor *gps, double pos_e[3], double vel_e[3])
 {
     int i;
 
-    gps->lat_lon_alt[0] =  (rad2deg((pos_e[0]/R_EARTH)) + HOME_LAT);// + zero_mean_noise(gps->lat_lon_noise_std_dev);
-    gps->lat_lon_alt[1] = (rad2deg(pos_e[1]/(R_EARTH*cos(deg2rad(gps->lat_lon_alt[0])))) + HOME_LON);// + zero_mean_noise(gps->lat_lon_noise_std_dev);
-    gps->lat_lon_alt[2] = (-pos_e[2] + HOME_ALT);// + zero_mean_noise(gps->alt_noise_std_dev);
+    gps->lat_lon_alt[0] =  (rad2deg((pos_e[0]/R_EARTH)) + HOME_LAT) + ((NOISE != 0 ) ? zero_mean_noise(gps->lat_lon_noise_std_dev) : 0);
+    gps->lat_lon_alt[1] = (rad2deg(pos_e[1]/(R_EARTH*cos(deg2rad(gps->lat_lon_alt[0])))) + HOME_LON) + ((NOISE != 0 ) ? zero_mean_noise(gps->lat_lon_noise_std_dev) : 0);
+    gps->lat_lon_alt[2] = (-pos_e[2] + HOME_ALT) + ((NOISE != 0 ) ? zero_mean_noise(gps->alt_noise_std_dev) : 0);
 
     for(i = 0 ; i < 3 ; i++)
-        gps->gps_speed[i] = vel_e[i];// + zero_mean_noise(gps->speed_noise_std_dev);
+        gps->gps_speed[i] = vel_e[i] + ((NOISE != 0 ) ? zero_mean_noise(gps->speed_noise_std_dev) : 0);
 
     gps->ground_speed = sqrt(pow(gps->gps_speed[0], 2) + pow(gps->gps_speed[1], 2));
-    gps->cog = wrap_angle_2pi(rad2deg(atan2(gps->gps_speed[1], gps->gps_speed[0])));
+    gps->cog = rad2deg(wrap_angle_2pi(atan2(gps->gps_speed[1], gps->gps_speed[0])));
 }
 
 void init_imu(ImuSensor *imu, double acc_noise_std_dev, double gyro_noise_std_dev)
@@ -56,8 +56,8 @@ void update_imu(ImuSensor *imu, double acc_b[3], double omega_b[3], double dcm_b
 
     for(i = 0 ; i < 3 ; i++)
     {
-        imu->acc[i] = acc_b[i] + (dcm_be[i][2] * (-GRAVITY));// + zero_mean_noise(imu->acc_noise_std_dev);
-        imu->gyro[i] = omega_b[i];// + zero_mean_noise(imu->gyro_noise_std_dev);
+        imu->acc[i] = acc_b[i] + (dcm_be[i][2] * (-GRAVITY)) + ((NOISE != 0 ) ? zero_mean_noise(imu->acc_noise_std_dev) : 0);
+        imu->gyro[i] = omega_b[i] + ((NOISE != 0 ) ? zero_mean_noise(imu->gyro_noise_std_dev) : 0);
     }
 }
 
@@ -99,9 +99,9 @@ void update_mag(MagSensor *mag, double dcm_be[3][3])
 
     earth_to_body_rotation(dcm_be, mag_e, mag->mag_field);
 
-    mag->mag_field[0] = mag->mag_scale*mag->mag_field[0];// + zero_mean_noise(mag->mag_noise_std_dev);
-    mag->mag_field[1] = mag->mag_scale*mag->mag_field[1];// + zero_mean_noise(mag->mag_noise_std_dev);
-    mag->mag_field[2] = mag->mag_scale*mag->mag_field[2];// + zero_mean_noise(mag->mag_noise_std_dev);
+    mag->mag_field[0] = mag->mag_scale*mag->mag_field[0] + ((NOISE != 0 ) ? zero_mean_noise(mag->mag_noise_std_dev) : 0);
+    mag->mag_field[1] = mag->mag_scale*mag->mag_field[1] + ((NOISE != 0 ) ? zero_mean_noise(mag->mag_noise_std_dev) : 0);
+    mag->mag_field[2] = mag->mag_scale*mag->mag_field[2] + ((NOISE != 0 ) ? zero_mean_noise(mag->mag_noise_std_dev) : 0);
 }
 
 void init_baro(BaroSensor *baro, double temperature)

@@ -937,7 +937,7 @@ int send_cmd_arm(uint8_t arm)
  *      This function will return 1 when the messages has been sent.
  *      If an error ocurred, -1 will be returned.
  */
-int send_hil_messages(uint64_t time_usec, double q[4], double euler_rates[3], double lat_lon_alt[3], double vel_e[3], double vel, double cog, double eph, double epv, int fix_type, int num_sats, double acc_b[3], double gyro[3], double mag[3], double pressure, double temperature)
+int send_hil_messages(uint64_t time_usec, double q[4], double lat_lon_alt[3], double vel_e[3], double vel, double cog, double eph, double epv, int fix_type, int num_sats, double acc_b[3], double gyro[3], double mag[3], double pressure, double temperature)
 {
     static uint64_t hil_state_update = 0;
     static uint64_t hil_sensor_update = 0;
@@ -1064,8 +1064,8 @@ int send_hil_gps(uint64_t time_usec, double lat_lon_alt[3], double vel_e[3], dou
 
 void get_thrust_commands_force(double thrust_commands[4])
 {
-    thrust_commands[0] = (max_thrust / 4.0) * ((!hover_reached) ? thrust_hover : (double)hil_actuators.controls[2]);//2
-    thrust_commands[1] = (max_thrust / 4.0) * ((!hover_reached) ? thrust_hover : (double)hil_actuators.controls[0]);//0
-    thrust_commands[2] = (max_thrust / 4.0) * ((!hover_reached) ? thrust_hover : (double)hil_actuators.controls[3]);//3
-    thrust_commands[3] = (max_thrust / 4.0) * ((!hover_reached) ? thrust_hover : (double)hil_actuators.controls[1]);//1
+    thrust_commands[0] = (max_thrust / 4.0) * ((!hover_reached) ? thrust_hover : (double)hil_actuators.controls[0]);//2
+    thrust_commands[1] = (max_thrust / 4.0) * ((!hover_reached) ? thrust_hover : (double)hil_actuators.controls[1]);//0
+    thrust_commands[2] = (max_thrust / 4.0) * ((!hover_reached) ? thrust_hover : (double)hil_actuators.controls[2]);//3
+    thrust_commands[3] = (max_thrust / 4.0) * ((!hover_reached) ? thrust_hover : (double)hil_actuators.controls[3]);//1
 }

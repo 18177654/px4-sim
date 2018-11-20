@@ -30,7 +30,7 @@ int init_sim()
     for(i = 0 ; i < 3 ; i++)
         c_d[i] = C_D;
 
-    init_quad(&quad, MASS, inertia, D_ARM, R_D, R_LD, c_d, THRUST_TC, THRUST_HOVER_NORM * THRUST_MAX_FORCE);
+    init_quad(&quad, MASS, inertia, D_ARM, R_D, c_d, THRUST_TC, THRUST_HOVER_NORM * THRUST_MAX_FORCE, HOME_YAW);
     init_quad_sensors(&quad, GPS_EPH, GPS_EPV, GPS_FIX, GPS_NUM_SATS, GPS_LAT_LON_NOISE, GPS_ALT_NOISE, GPS_SPEED_NOISE, IMU_ACC_NOISE, IMU_GYRO_NOISE, MAG_DECL, MAG_INCL, MAG_SCALE, MAG_NOISE, BARO_TEMP);
 
     // Initialise PX4 sim
@@ -41,13 +41,10 @@ int advance_sim(uint64_t time_usec, double dt, double wind_vel_e[3])
 {
     int i;
     int result;
-    double q[4];
     double thrust_commands[4];
 
-    get_att_quaternion(&quad, q);
-
     // Send HIL MAVLink messages
-    result = send_hil_messages(time_usec, q, quad.state.euler_rates, quad.sensors.gps.lat_lon_alt, quad.sensors.gps.gps_speed, quad.sensors.gps.ground_speed, quad.sensors.gps.cog, quad.sensors.gps.eph, quad.sensors.gps.epv, quad.sensors.gps.fix, quad.sensors.gps.visible_sats, quad.sensors.imu.acc, quad.sensors.imu.gyro, quad.sensors.mag.mag_field, quad.sensors.baro.pressure, quad.sensors.baro.temperature);
+    result = send_hil_messages(time_usec, quad.state.quat, quad.sensors.gps.lat_lon_alt, quad.sensors.gps.gps_speed, quad.sensors.gps.ground_speed, quad.sensors.gps.cog, quad.sensors.gps.eph, quad.sensors.gps.epv, quad.sensors.gps.fix, quad.sensors.gps.visible_sats, quad.sensors.imu.acc, quad.sensors.imu.gyro, quad.sensors.mag.mag_field, quad.sensors.baro.pressure, quad.sensors.baro.temperature);
     if(result < 0)
         return result;
 
@@ -149,7 +146,7 @@ void testQuadDynamics()
     for(i = 0 ; i < 3 ; i++)
         c_d[i] = C_D;
 
-    init_quad(&quad, MASS, inertia, D_ARM, R_D, R_LD, c_d, THRUST_TC, THRUST_HOVER_NORM * THRUST_MAX_FORCE);
+    init_quad(&quad, MASS, inertia, D_ARM, R_D, c_d, THRUST_TC, THRUST_HOVER_NORM * THRUST_MAX_FORCE, HOME_YAW);
     init_quad_sensors(&quad, GPS_EPH, GPS_EPV, GPS_FIX, GPS_NUM_SATS, GPS_LAT_LON_NOISE, GPS_ALT_NOISE, GPS_SPEED_NOISE, IMU_ACC_NOISE, IMU_GYRO_NOISE, MAG_DECL, MAG_INCL, MAG_SCALE, MAG_NOISE, BARO_TEMP);
 
     // Initialise wind and thrust
@@ -201,11 +198,6 @@ void printStates(Quad *quad)
     printf("Omega (Body):\n");
     for(i = 0 ; i < 3 ; i++)
         printf("%4.9f\t", quad->state.omega_b[i]);
-    printf("\n");
-
-    printf("Euler Rates:\n");
-    for(i = 0 ; i < 3 ; i++)
-        printf("%4.9f\t", quad->state.euler_rates[i]);
     printf("\n");
 
     printf("Euler:\n");

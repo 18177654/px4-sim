@@ -56,28 +56,41 @@ double rand_gauss(double mean, double std_dev)
     return (mean + std_dev * (double)X1);
 }
 
-void calc_dcm_be(double euler[3], double dcm_be[3][3])
+void quat_to_euler(double q[4], double euler[3])
 {
-    double c_phi, c_theta, c_psi;
-    double s_phi, s_theta, s_psi;
+    // roll
+    euler[0] = wrap_angle_pi(atan2(2*(q[0]*q[1] + q[2]*q[3]), 1 - 2*(pow(q[1], 2) + pow(q[2], 2))));
 
-    c_phi = cos(euler[0]);
-    c_theta = cos(euler[1]);
-    c_psi = cos(euler[2]);
+    // pitch
+    double sinp = 2*(q[0]*q[2] - q[3]*q[1]);
+    if(abs(sinp) >= 1)
+        euler[1] = copysign(M_PI / 2, sinp); // use 90 degrees if out of range
+    else
+        euler[1] = wrap_angle_pi(asin(sinp));
 
-    s_phi = sin(euler[0]);
-    s_theta = sin(euler[1]);
-    s_psi = sin(euler[2]);
+    // yaw
+    euler[2] = wrap_angle_pi(atan2(2*(q[0]*q[3] + q[1]*q[2]), 1 - 2*(pow(q[2], 2) + pow(q[3], 2))));
+}
 
-    dcm_be[0][0] = c_psi*c_theta;
-    dcm_be[0][1] = s_psi*c_theta;
-    dcm_be[0][2] = -s_theta;
-    dcm_be[1][0] = c_psi*s_theta*s_phi - s_psi*c_phi;
-    dcm_be[1][1] = s_psi*s_theta*s_phi + c_psi*c_phi;
-    dcm_be[1][2] = c_theta*s_phi;
-    dcm_be[2][0] = c_psi*s_theta*c_phi + s_psi*s_phi;
-    dcm_be[2][1] = s_psi*s_theta*c_phi - c_psi*s_phi;
-    dcm_be[2][2] = c_theta*c_phi;
+void euler_to_quat(double euler[3], double quat[4])
+{
+    quat[0] = cos(euler[0]/2)*cos(euler[1]/2)*cos(euler[2]/2) + sin(euler[0]/2)*sin(euler[1]/2)*sin(euler[2]/2);
+    quat[1] = sin(euler[0]/2)*cos(euler[1]/2)*cos(euler[2]/2) - cos(euler[0]/2)*sin(euler[1]/2)*sin(euler[2]/2);
+    quat[2] = cos(euler[0]/2)*sin(euler[1]/2)*cos(euler[2]/2) + sin(euler[0]/2)*cos(euler[1]/2)*sin(euler[2]/2);
+    quat[3] = cos(euler[0]/2)*cos(euler[1]/2)*sin(euler[2]/2) + sin(euler[0]/2)*sin(euler[1]/2)*cos(euler[2]/2);
+}
+
+void calc_dcm_be(double q[4], double dcm_be[3][3])
+{
+    dcm_be[0][0] = pow(q[0], 2) + pow(q[1], 2) - pow(q[2], 2) - pow(q[3], 2);
+    dcm_be[0][1] = 2*(q[1]*q[2] + q[0]*q[3]);
+    dcm_be[0][2] = 2*(q[1]*q[3] - q[0]*q[2]);
+    dcm_be[1][0] = 2*(q[1]*q[2] - q[0]*q[3]);
+    dcm_be[1][1] = pow(q[0], 2) - pow(q[1], 2) + pow(q[2], 2) - pow(q[3], 2);
+    dcm_be[1][2] = 2*(q[2]*q[3] + q[0]*q[1]);
+    dcm_be[2][0] = 2*(q[1]*q[3] + q[0]*q[2]);
+    dcm_be[2][1] = 2*(q[2]*q[3] - q[0]*q[1]);
+    dcm_be[2][2] = pow(q[0], 2) - pow(q[1], 2) - pow(q[2], 2) + pow(q[3], 2);
 }
 
 void body_to_earth_rotation(double dcm_be[3][3], double rotate_from[3], double rotate_to[3])

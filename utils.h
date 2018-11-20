@@ -24,7 +24,10 @@ double rad2deg(double rad);
 double zero_mean_noise(double std_dev);
 double rand_gauss(double mean, double std_dev);
 
-void calc_dcm_be(double euler[3], double dcm_be[3][3]);
+void quat_to_euler(double q[4], double euler[3]);
+void euler_to_quat(double euler[3], double quat[4]);
+
+void calc_dcm_be(double q[4], double dcm_be[3][3]);
 void body_to_earth_rotation(double dcm_be[3][3], double rotate_from[3], double rotate_to[3]);
 void earth_to_body_rotation(double dcm_be[3][3], double rotate_from[3], double rotate_to[3]);
 
