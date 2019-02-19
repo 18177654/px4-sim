@@ -27,7 +27,7 @@
 #define DEFAULT_HIL_GCS_PORT 14550
 
 #define DEFAULT_SIL_SERVER "127.0.0.1"
-#define DEFAULT_SIL_PORT 14560
+#define DEFAULT_SIL_PORT 4560
 
 #define HIL_MSG_TIME_ERROR 0 // us
 
@@ -53,11 +53,14 @@ int hil_gcs_port;
 char sil_server[15];
 int sil_port;
 
-int serial_fd; // serial connection
-struct termios serial_config; // serial configuration
+int fc_serial_fd; // serial connection to flight controller
+struct termios fc_serial_config; // serial configuration
 
-int udp_fd; // udp connection
-struct sockaddr_in udp_addr_in; // udp address configuration
+int gcs_udp_fd; // udp connection to GCS
+struct sockaddr_in gcs_udp_addr_in; // udp address configuration
+
+int sitl_tcp_fd; // tcp connection to PX4 SITL
+struct sockaddr_in sitl_tcp_addr_in; // tcp address configuration
 
 mavlink_hil_actuator_controls_t hil_actuators; // Last HIL actuators message received.
 
@@ -89,11 +92,11 @@ void init_globals(int hil_enabled, float thrust_hover_norm, float max_thrust_for
 
 int connect_sim();
 
-int connect_serial(int *serial_fd, struct termios *serial_config, char *com_port, int baud);
-int configure_serial(int *serial_fd, struct termios *serial_config, int baud);
+int connect_serial(int *fc_serial_fd, struct termios *fc_serial_config, char *com_port, int baud);
+int configure_serial(int *fc_serial_fd, struct termios *fc_serial_config, int baud);
 
-int connect_udp(int *udp_fd, struct sockaddr_in *udp_addr_in, char *server, int port);
-int configure_udp(int *udp_fd, struct sockaddr_in *udp_addr_in, char *server, int port);
+int connect_ip(int *ip_fd, struct sockaddr_in *ip_addr_in, char *server, int port, bool is_tcp);
+int configure_ip(int *ip_fd, struct sockaddr_in *ip_addr_in, char *server, int port, bool is_tcp);
 
 int get_poll_index();
 
@@ -206,25 +209,25 @@ int connect_sim()
 
     if(hil)
     {
-        result = connect_serial(&serial_fd, &serial_config, hil_com_port, hil_baud);
+        result = connect_serial(&fc_serial_fd, &fc_serial_config, hil_com_port, hil_baud);
 
-        poll_fds[HIL_POLL_AP].fd = serial_fd;
+        poll_fds[HIL_POLL_AP].fd = fc_serial_fd;
         poll_fds[HIL_POLL_AP].events = 0; // clear
         poll_fds[HIL_POLL_AP].events |= POLLIN; // poll read
         if(result >= 0)
         {
-            result = connect_udp(&udp_fd, &udp_addr_in, hil_gcs_server, hil_gcs_port);
+            result = connect_ip(&gcs_udp_fd, &gcs_udp_addr_in, hil_gcs_server, hil_gcs_port, false);
 
-            poll_fds[HIL_POLL_GCS].fd = udp_fd;
+            poll_fds[HIL_POLL_GCS].fd = gcs_udp_fd;
             poll_fds[HIL_POLL_GCS].events = 0; // clear
             poll_fds[HIL_POLL_GCS].events |= POLLIN; // poll read
         }
     }
     else
     {
-        result = connect_udp(&udp_fd, &udp_addr_in, sil_server, sil_port);
+        result = connect_ip(&sitl_tcp_fd, &sitl_tcp_addr_in, sil_server, sil_port, true);
 
-        poll_fds[SIL_POLL_AP].fd = udp_fd;
+        poll_fds[SIL_POLL_AP].fd = sitl_tcp_fd;
         poll_fds[SIL_POLL_AP].events = 0; // clear
         poll_fds[SIL_POLL_AP].events |= POLLIN; // poll read
     }
@@ -240,17 +243,17 @@ void disconnect_sim()
 {
     if(hil)
     {
-        if (serial_fd >= 0)
+        if (fc_serial_fd >= 0)
         {
-            close(serial_fd);
-            if(udp_fd >= 0)
-                close(udp_fd);
+            close(fc_serial_fd);
+            if(gcs_udp_fd >= 0)
+                close(gcs_udp_fd);
         }
     }
     else
     {
-        if(udp_fd >= 0)
-            close(udp_fd);
+        if(sitl_tcp_fd >= 0)
+            close(sitl_tcp_fd);
     }
 }
 
@@ -259,27 +262,27 @@ void disconnect_sim()
  *      Connects to and configures the given serial connection.
  * 
  * Parameters:
- *      - serial_fd: the serial file descriptor
- *      - serial_config: the serial configuarion
+ *      - fc_serial_fd: the serial file descriptor
+ *      - fc_serial_config: the serial configuarion
  *      - com_port: the COM port to connect to
  *      - baud: the baud rate at which to communicate
  * 
  * Returns:
  *      0 if no error occurred.
  */
-int connect_serial(int *serial_fd, struct termios *serial_config, char *com_port, int baud)
+int connect_serial(int *fc_serial_fd, struct termios *fc_serial_config, char *com_port, int baud)
 {
-    *serial_fd = open(com_port, O_RDWR | O_NOCTTY | O_NDELAY);
-    if (*serial_fd == -1)
+    *fc_serial_fd = open(com_port, O_RDWR | O_NOCTTY | O_NDELAY);
+    if (*fc_serial_fd == -1)
     {
         return ERROR_CONNECT;
     }
 
     // Finalize
-    fcntl(*serial_fd, F_SETFL, 0);
+    fcntl(*fc_serial_fd, F_SETFL, 0);
 
     // Configure port.
-    return configure_serial(serial_fd, serial_config, baud);
+    return configure_serial(fc_serial_fd, fc_serial_config, baud);
 }
 
 /* Function: configure_serial ===============================================
@@ -287,20 +290,20 @@ int connect_serial(int *serial_fd, struct termios *serial_config, char *com_port
  *      Configures the given serial connection.
  * 
  * Parameters:
- *      - serial_fd: the serial file descriptor
- *      - serial_config: the serial configuarion
+ *      - fc_serial_fd: the serial file descriptor
+ *      - fc_serial_config: the serial configuarion
  *      - baud: the baud rate at which to communicate
  * 
  * Returns:
  *      0 if no error occurred.
  */
-int configure_serial(int *serial_fd, struct termios *serial_config, int baud)
+int configure_serial(int *fc_serial_fd, struct termios *fc_serial_config, int baud)
 {
-    if (!isatty(*serial_fd))
+    if (!isatty(*fc_serial_fd))
     {
         return ERROR_TTY;
     }
-    if (tcgetattr(*serial_fd, serial_config) < 0)
+    if (tcgetattr(*fc_serial_fd, fc_serial_config) < 0)
     {
         return ERROR_GET_CONFIG;
     }
@@ -310,37 +313,37 @@ int configure_serial(int *serial_fd, struct termios *serial_config, int baud)
     // no NL to CR translation, don't mark parity errors or breaks
     // no input parity check, don't strip high bit off,
     // no XON/XOFF software flow control
-    serial_config->c_iflag &= ~(IGNBRK | BRKINT | ICRNL | INLCR | PARMRK | INPCK | ISTRIP | IXON | IXOFF | IXANY);
+    fc_serial_config->c_iflag &= ~(IGNBRK | BRKINT | ICRNL | INLCR | PARMRK | INPCK | ISTRIP | IXON | IXOFF | IXANY);
 
     // Output flags - Turn off output processing
     // no CR to NL translation, no NL to CR-NL translation,
     // no NL to CR translation, no column 0 CR suppression,
     // no Ctrl-D suppression, no fill characters, no case mapping,
     // no local output processing
-    serial_config->c_oflag &= ~(OCRNL | ONLCR | ONLRET | ONOCR | OFILL | OPOST);
+    fc_serial_config->c_oflag &= ~(OCRNL | ONLCR | ONLRET | ONOCR | OFILL | OPOST);
 
     // No line processing:
     // echo off, echo newline off, canonical mode off,
     // extended input processing off, signal chars off
-    serial_config->c_lflag &= ~(ECHO | ECHONL | ICANON | IEXTEN | ISIG);
+    fc_serial_config->c_lflag &= ~(ECHO | ECHONL | ICANON | IEXTEN | ISIG);
 
     // Turn off character processing
     // clear current char size mask, no parity checking, 1 stop bit, no hardware based flow control
     // no output processing, force 8 bit input, turn on read
-    serial_config->c_cflag &= ~(CSIZE | PARENB | CSTOPB | CRTSCTS);
-    serial_config->c_cflag |= (CS8 | CREAD | CLOCAL);
+    fc_serial_config->c_cflag &= ~(CSIZE | PARENB | CSTOPB | CRTSCTS);
+    fc_serial_config->c_cflag |= (CS8 | CREAD | CLOCAL);
 
     // One input byte is enough to return from read()
     // Inter-character timer off
-    serial_config->c_cc[VMIN] = 1;
-    serial_config->c_cc[VTIME] = 0;
+    fc_serial_config->c_cc[VMIN] = 1;
+    fc_serial_config->c_cc[VTIME] = 0;
 
     // Apply baudrate
-    cfsetospeed(serial_config, baud);
-    cfsetispeed(serial_config, baud);
+    cfsetospeed(fc_serial_config, baud);
+    cfsetispeed(fc_serial_config, baud);
 
     // Apply configuration.
-    if (tcsetattr(*serial_fd, TCSANOW, serial_config) < 0)
+    if (tcsetattr(*fc_serial_fd, TCSANOW, fc_serial_config) < 0)
     {
         return ERROR_APPLY_CONFIG;
     }
@@ -348,54 +351,65 @@ int configure_serial(int *serial_fd, struct termios *serial_config, int baud)
     return 0;
 }
 
-/* Function: connect_udp ===============================================
+/* Function: connect_ip ===============================================
  * Abstract:
- *      Connects to and configures the given UDP connection.
+ *      Connects to and configures the given IP connection.
  * 
  * Parameters:
- *      - udp_fd: the UDP file descriptor
- *      - udp_addr_in: the UDP socket address configuration
+ *      - ip_fd: the IP file descriptor
+ *      - ip_addr_in: the IP socket address configuration
  *      - server: the server to connect to
  *      - port: the port to connect to
  * 
  * Returns:
  *      0 if no error occurred.
  */
-int connect_udp(int *udp_fd, struct sockaddr_in *udp_addr_in, char *server, int port)
+int connect_ip(int *ip_fd, struct sockaddr_in *ip_addr_in, char *server, int port, bool is_tcp)
 {
-    *udp_fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-    if(*udp_fd < 0)
+    if(is_tcp) {
+        *ip_fd = socket(PF_INET, SOCK_STREAM, 0);
+    } else {
+        *ip_fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    }
+
+    if(*ip_fd < 0)
     {
         return ERROR_CONNECT;
     }
 
-    return configure_udp(udp_fd, udp_addr_in, server, port);
+    return configure_ip(ip_fd, ip_addr_in, server, port, is_tcp);
 }
 
-/* Function: configure_udp ===============================================
+/* Function: configure_ip ===============================================
  * Abstract:
- *      Configures the given UDP connection.
+ *      Configures the given IP connection.
  * 
  * Parameters:
- *      - udp_fd: the UDP file descriptor
- *      - udp_addr_in: the UDP socket address configuration
+ *      - ip_fd: the IP file descriptor
+ *      - ip_addr_in: the IP socket address configuration
  *      - server: the server to connect to
  *      - port: the port to connect to
  * 
  * Returns:
  *      0 if no error occurred.
  */
-int configure_udp(int *udp_fd, struct sockaddr_in *udp_addr_in, char *server, int port)
+int configure_ip(int *ip_fd, struct sockaddr_in *ip_addr_in, char *server, int port, bool is_tcp)
 {
-    udp_addr_in->sin_family = AF_INET;
-    udp_addr_in->sin_port = htons(port);
+    int result = 0;
 
-    if (inet_aton(server, &(udp_addr_in->sin_addr)) == 0) 
+    ip_addr_in->sin_family = AF_INET;
+    ip_addr_in->sin_port = htons(port);
+
+    if (inet_aton(server, &(ip_addr_in->sin_addr)) == 0) 
     {
         return ERROR_SERVER;
     }
 
-    return 0;
+    if(is_tcp) {
+        result = connect(*ip_fd, (struct sockaddr*) ip_addr_in, sizeof(*ip_addr_in));
+    }
+
+    return result;
 }
 
 /* Function: get_poll_index ===============================================
@@ -434,12 +448,17 @@ int read_bytes(uint8_t *buffer, uint16_t len, uint8_t poll_id)
 {
     if(poll_id == HIL_POLL_AP)
     {
-        return read(serial_fd, buffer, len);
+        return read(fc_serial_fd, buffer, len);
+    }
+    else if(poll_id == SIL_POLL_AP)
+    {
+        socklen_t addr_len = sizeof(sitl_tcp_addr_in);
+        return recvfrom(sitl_tcp_fd, buffer, len, 0, (struct sockaddr *)&sitl_tcp_addr_in, &addr_len);
     }
     else
     {
-        socklen_t addr_len = sizeof(udp_addr_in);
-        return recvfrom(udp_fd, buffer, len, 0, (struct sockaddr *)&udp_addr_in, &addr_len);
+        socklen_t addr_len = sizeof(gcs_udp_addr_in);
+        return recvfrom(gcs_udp_fd, buffer, len, 0, (struct sockaddr *)&gcs_udp_addr_in, &addr_len);
     }
 }
 
@@ -460,19 +479,30 @@ int write_bytes(uint8_t *buffer, uint16_t len, uint8_t poll_id)
 {
     if(poll_id == HIL_POLL_AP)
     {
-        int result = write(serial_fd, buffer, len);
+        int result = write(fc_serial_fd, buffer, len);
 
         if (result != len)
         {
             return ERROR_WRITE_FAIL;
         }
 
-        tcdrain(serial_fd);
+        tcdrain(fc_serial_fd);
         return 1;
+    }
+    else if(poll_id == SIL_POLL_AP)
+    {
+        int result = sendto(sitl_tcp_fd, buffer, len, 0, (struct sockaddr *)&sitl_tcp_addr_in, sizeof(sitl_tcp_addr_in));
+
+        if(result < 0)
+        {
+            return ERROR_WRITE_FAIL;
+        }
+
+        return result;
     }
     else
     {
-        int result = sendto(udp_fd, buffer, len, 0, (struct sockaddr *)&udp_addr_in, sizeof(udp_addr_in));
+        int result = sendto(gcs_udp_fd, buffer, len, 0, (struct sockaddr *)&gcs_udp_addr_in, sizeof(gcs_udp_addr_in));
 
         if(result < 0)
         {
@@ -513,7 +543,7 @@ int read_message(mavlink_message_t *message, uint8_t poll_id)
     {
         for(uint8_t i = 0 ; i < read_result ; i++)
         {
-            msg_received = mavlink_parse_char(MAVLINK_COMM_0, buffer[i], message, &status);
+            msg_received = mavlink_parse_char(MAVLINK_COMM_1, buffer[i], message, &status);
             if(msg_received > 0)
             {
                 break;
