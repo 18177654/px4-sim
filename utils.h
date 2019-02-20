@@ -24,6 +24,8 @@ double rad2deg(double rad);
 double zero_mean_noise(double std_dev);
 double rand_gauss(double mean, double std_dev);
 
+void ned_to_latlonalt(double ned[3], double latlonalt[3], double home_lat, double home_lon, double home_alt);
+
 void quat_to_euler(double q[4], double euler[3]);
 void euler_to_quat(double euler[3], double quat[4]);
 

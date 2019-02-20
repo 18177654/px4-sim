@@ -28,6 +28,10 @@ double n_dot(double uvwpqr_quat_ned[], int len);
 double e_dot(double uvwpqr_quat_ned[], int len);
 double d_dot(double uvwpqr_quat_ned[], int len);
 
+double phi_dot(double euler[], double pqr[]);
+double theta_dot(double euler[], double pqr[]);
+double psi_dot(double euler[], double pqr[]);
+
 double thrust_dot(double thrust[], int len);
 
 // Public function definitions
@@ -141,7 +145,10 @@ void six_dof(double dt, Quad *quad, double forces[3], double moments[3])
     calc_dcm_be(quad_state->quat, quad_state->dcm_be);
     body_to_earth_rotation(quad_state->dcm_be, quad_state->vel_b, quad_state->vel_e);
 
-    // Calculate euler angles (for representation use only)
+    // Calculate euler angles and euler rates (for representation use only)
+    quad_state->euler_rates[0] = phi_dot(quad_state->euler, quad_state->omega_b);
+    quad_state->euler_rates[1] = theta_dot(quad_state->euler, quad_state->omega_b);
+    quad_state->euler_rates[2] = psi_dot(quad_state->euler, quad_state->omega_b);
     quat_to_euler(quad_state->quat, quad_state->euler);
 
     // Calculate and store the acceleration.
@@ -334,6 +341,30 @@ double d_dot(double uvwpqr_quat_ned[], int len)
     return (2*(uvwpqr_quat_ned[7]*uvwpqr_quat_ned[9] - uvwpqr_quat_ned[6]*uvwpqr_quat_ned[8]))*uvwpqr_quat_ned[0] +
         (2*(uvwpqr_quat_ned[8]*uvwpqr_quat_ned[9] + uvwpqr_quat_ned[6]*uvwpqr_quat_ned[7]))*uvwpqr_quat_ned[1] +
         (pow(uvwpqr_quat_ned[6], 2) - pow(uvwpqr_quat_ned[7], 2) - pow(uvwpqr_quat_ned[8], 2) + pow(uvwpqr_quat_ned[9], 2))*uvwpqr_quat_ned[2];
+}
+
+double phi_dot(double euler[], double pqr[])
+{
+    if(abs(cos(euler[1])) <= 1e-5)
+        return 0;
+
+    return (1/cos(euler[1]))*(sin(euler[2])*pqr[1] + cos(euler[2])*pqr[2]);
+}
+
+double theta_dot(double euler[], double pqr[])
+{
+    if(abs(cos(euler[1])) <= 1e-5)
+        return 0;
+
+    return (1/cos(euler[1]))*(cos(euler[2])*sin(euler[1])*pqr[1] - sin(euler[2])*cos(euler[1])*pqr[2]);
+}
+
+double psi_dot(double euler[], double pqr[])
+{
+    if(abs(cos(euler[1])) <= 1e-5)
+        return 0;
+
+    return (1/cos(euler[1]))*(cos(euler[1])*pqr[0] + sin(euler[2])*sin(euler[1])*pqr[1] + cos(euler[2])*sin(euler[1])*pqr[2]);
 }
 
 double thrust_dot(double thrust[], int len)

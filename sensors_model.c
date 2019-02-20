@@ -25,9 +25,13 @@ void update_gps(GpsSensor *gps, double pos_e[3], double vel_e[3])
 {
     int i;
 
-    gps->lat_lon_alt[0] =  (rad2deg((pos_e[0]/R_EARTH)) + HOME_LAT) + ((NOISE != 0 ) ? zero_mean_noise(gps->lat_lon_noise_std_dev) : 0);
-    gps->lat_lon_alt[1] = (rad2deg(pos_e[1]/(R_EARTH*cos(deg2rad(gps->lat_lon_alt[0])))) + HOME_LON) + ((NOISE != 0 ) ? zero_mean_noise(gps->lat_lon_noise_std_dev) : 0);
-    gps->lat_lon_alt[2] = (-pos_e[2] + HOME_ALT) + ((NOISE != 0 ) ? zero_mean_noise(gps->alt_noise_std_dev) : 0);
+    // Convert NED to lat lon alt
+    ned_to_latlonalt(pos_e, gps->lat_lon_alt, HOME_LAT, HOME_LON, HOME_ALT);
+
+    // Add noise
+    gps->lat_lon_alt[0] =  gps->lat_lon_alt[0] + ((NOISE != 0 ) ? zero_mean_noise(gps->lat_lon_noise_std_dev) : 0);
+    gps->lat_lon_alt[1] = gps->lat_lon_alt[1] + ((NOISE != 0 ) ? zero_mean_noise(gps->lat_lon_noise_std_dev) : 0);
+    gps->lat_lon_alt[2] = gps->lat_lon_alt[2] + ((NOISE != 0 ) ? zero_mean_noise(gps->alt_noise_std_dev) : 0);
 
     for(i = 0 ; i < 3 ; i++)
         gps->gps_speed[i] = vel_e[i] + ((NOISE != 0 ) ? zero_mean_noise(gps->speed_noise_std_dev) : 0);

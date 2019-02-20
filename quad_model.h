@@ -17,6 +17,7 @@ typedef struct
     double quat_rates[4]; // derivative of quaternions
     double quat[4]; // quaternions
     double euler[3]; // phi, theta, psi (rad)
+    double euler_rates[3]; // phi_dot, theta_dot, psi_dot (rad/s)
     double dcm_be[3][3]; // direct cosine matrix
 } QuadState;
 

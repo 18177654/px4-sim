@@ -41,10 +41,12 @@ int advance_sim(uint64_t time_usec, double dt, double wind_vel_e[3])
 {
     int i;
     int result;
+    double latlonalt[3];
     double thrust_commands[4];
 
     // Send HIL MAVLink messages
-    result = send_hil_messages(time_usec, quad.state.quat, quad.sensors.gps.lat_lon_alt, quad.sensors.gps.gps_speed, quad.sensors.gps.ground_speed, quad.sensors.gps.cog, quad.sensors.gps.eph, quad.sensors.gps.epv, quad.sensors.gps.fix, quad.sensors.gps.visible_sats, quad.sensors.imu.acc, quad.sensors.imu.gyro, quad.sensors.mag.mag_field, quad.sensors.baro.pressure, quad.sensors.baro.temperature);
+    ned_to_latlonalt(quad.state.pos_e, latlonalt, HOME_LAT, HOME_LON, HOME_ALT);
+    result = send_hil_messages(time_usec, quad.state.quat, quad.state.euler_rates, quad.state.acc_b, quad.state.dcm_be, quad.state.vel_e, latlonalt, quad.sensors.gps.lat_lon_alt, quad.sensors.gps.gps_speed, quad.sensors.gps.ground_speed, quad.sensors.gps.cog, quad.sensors.gps.eph, quad.sensors.gps.epv, quad.sensors.gps.fix, quad.sensors.gps.visible_sats, quad.sensors.imu.acc, quad.sensors.imu.gyro, quad.sensors.mag.mag_field, quad.sensors.baro.pressure, quad.sensors.baro.temperature);
     if(result < 0)
         return result;
 

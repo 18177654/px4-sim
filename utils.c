@@ -56,6 +56,13 @@ double rand_gauss(double mean, double std_dev)
     return (mean + std_dev * (double)X1);
 }
 
+void ned_to_latlonalt(double ned[3], double latlonalt[3], double home_lat, double home_lon, double home_alt)
+{
+    latlonalt[0] =  (rad2deg((ned[0]/R_EARTH)) + home_lat);
+    latlonalt[1] = (rad2deg(ned[1]/(R_EARTH*cos(deg2rad(latlonalt[0])))) + home_lon);
+    latlonalt[2] = (-ned[2] + home_alt);
+}
+
 void quat_to_euler(double q[4], double euler[3])
 {
     // roll

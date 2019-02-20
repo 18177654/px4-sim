@@ -81,7 +81,6 @@ uint16_t hil_gps_freq;
 int8_t mav_sys_id; // The system ID of the autopilot
 int8_t mav_comp_id; // The component ID of the simulator
 
-bool mav_inited; // Indicates whether the MAVLink communication is initialised, i.e when the sim has received a heartbeat from the autopilot to obtain its system ID
 bool armed; // Indicates whether the autopilot is armed
 bool hover_reached; // Indicates whether the hover throttle has been reached or not.
 
@@ -106,8 +105,6 @@ int write_bytes(uint8_t *buffer, uint16_t len, uint8_t poll_id);
 int read_message(mavlink_message_t *message, uint8_t poll_id);
 int handleMessage(mavlink_message_t *message, int poll_index);
 
-int init_autopilot();
-
 void show_message(mavlink_message_t *message);
 void show_heartbeat(mavlink_message_t *message);
 void show_statustext(mavlink_message_t *message);
@@ -119,7 +116,7 @@ int send_heartbeat();
 int send_cmd_ack(uint16_t cmd, uint8_t result);
 int send_cmd_set_mode();
 int send_cmd_arm(uint8_t arm);
-int send_hil_state(uint64_t time_usec, double q[4], double euler_rates[3], double lat_lon_alt[3], double vel_e[3], double acc_b[3]);
+int send_hil_state(uint64_t time_usec, double q[4], double euler_rates[3], double lat_lon_alt[3], double vel_e[3], double acc_b[3], double dcm_be[3][3]);
 int send_hil_sensors(uint64_t time_usec, double acc_b[3], double gyro[3], double mag[3], double pressure, double alt, double temperature);
 int send_hil_gps(uint64_t time_usec, double lat_lon_alt[3], double vel_e[3], double vel, double cog, double eph, double epv, int fix_type, int num_sats);
 
@@ -133,11 +130,6 @@ int init_px4_sim(uint16_t sensor_freq, uint16_t gps_freq, int hil_enabled, float
     // Connect to the device.
     int result = connect_sim();
     if (result < 0)
-        return result;
-
-    // Wait for autopilot heartbeat.
-    result = init_autopilot();
-    if(result < 0)
         return result;
 }
 
@@ -182,7 +174,6 @@ void init_globals(int hil_enabled, float thrust_hover_norm, float max_thrust_for
 
     time_usec = 0;
 
-    mav_inited = false;
     armed = false;
     hover_reached = false;
 
@@ -639,17 +630,6 @@ int handleMessage(mavlink_message_t *message, int poll_index)
 
     switch(message->msgid)
     {
-        case MAVLINK_MSG_ID_HEARTBEAT:
-            if(!mav_inited)
-            {
-                mav_inited = true;
-                mav_sys_id = message->sysid;
-                mav_comp_id = message->compid + 1;
-#if DEBUG_SIM == ENABLED
-                printf("Initialised!\n");
-#endif
-            }
-            break;
         case MAVLINK_MSG_ID_COMMAND_LONG:
             if(hil_state_freq <= 0)
             {
@@ -659,7 +639,7 @@ int handleMessage(mavlink_message_t *message, int poll_index)
                 {
                     hil_state_freq = cmd.param2;
 #if DEBUG_SIM == ENABLED
-                    printf("HIL_STATE Interval: %f\n", hil_state_freq);
+                    printf("HIL_STATE Interval: %.3f s (%.2f Hz)\n", hil_state_freq/1000000.0, 1000000.0/hil_state_freq);
 #endif
                 }
             }
@@ -707,45 +687,6 @@ int handleMessage(mavlink_message_t *message, int poll_index)
     }
     
     return message->msgid;
-}
-
-/* Function: init_autopilot ===============================================
- * Abstract:
- *      Sends heartbeats to the autopilot until a heartbeat is received.
- * 
- * Returns:
- *      This function returns 1 if successful.
- *      This function will return a negative number if an error occurred.
- */
-int init_autopilot()
-{
-    int success;
-    int ret = 0;
-
-    while(!mav_inited)
-    {
-        ret = send_heartbeat();
-        if(ret < 0)
-        {
-            return ret; // error.
-        }
-
-        success = pollMavlinkMessage();
-        if(success < 0)
-        {
-            return success; // error.
-        }
-        
-        usleep(10 * 1000); // 10 ms
-    }
-
-    ret = send_cmd_set_mode();
-    if(ret < 0)
-    {
-        return ret; // error.
-    }
-
-    return 1;
 }
 
 /* Function: show_message ===============================================
@@ -971,26 +912,26 @@ int send_cmd_arm(uint8_t arm)
  *      This function will return 1 when the messages has been sent.
  *      If an error ocurred, -1 will be returned.
  */
-int send_hil_messages(uint64_t time_usec, double q[4], double lat_lon_alt[3], double vel_e[3], double vel, double cog, double eph, double epv, int fix_type, int num_sats, double acc_b[3], double gyro[3], double mag[3], double pressure, double temperature)
+int send_hil_messages(uint64_t time_usec, double q[4], double euler_rates[3], double acc_b[3], double dcm_be[3][3], double vel_e[3], double lat_lon_alt[3], double gps[3], double gps_speed[3], double vel, double cog, double eph, double epv, int fix_type, int num_sats, double accelerometer[3], double gyro[3], double mag[3], double pressure, double temperature)
 {
     static uint64_t hil_state_update = 0;
     static uint64_t hil_sensor_update = 0;
     static uint64_t hil_gps_update = 0;
 
     int ret = 1;
-    // if(hil_state_freq > 0 && (int64_t)(time_usec - hil_state_update) >= HIL_MSG_TIME_ERROR)
-    // {
-    //     ret = send_hil_state(time_usec, q, euler_rates, lat_lon_alt, vel_e, acc_b);
-    //     hil_state_update = time_usec + (uint64_t)(1000000.0 / hil_state_freq);
-    // }
+    if(hil_state_freq > 0 && (int64_t)(time_usec - hil_state_update) >= HIL_MSG_TIME_ERROR)
+    {
+        ret = send_hil_state(time_usec, q, euler_rates, lat_lon_alt, vel_e, acc_b, dcm_be);
+        hil_state_update = time_usec + (uint64_t)(1000000.0 / hil_state_freq);
+    }
     if(ret > 0 && time_usec >= time_usec_start + hil_sensor_startup_delay * 1000 && (int64_t)(time_usec - hil_sensor_update) >= HIL_MSG_TIME_ERROR)
     {
-        ret = send_hil_sensors(time_usec, acc_b, gyro, mag, pressure, lat_lon_alt[2], temperature);
+        ret = send_hil_sensors(time_usec, accelerometer, gyro, mag, pressure, gps[2], temperature);
         hil_sensor_update = time_usec + (uint64_t)(1000000.0 / hil_sensor_freq);
     }
     if(ret > 0 && time_usec >= time_usec_start + hil_gps_startup_delay * 1000 && (int64_t)(time_usec - hil_gps_update) >= HIL_MSG_TIME_ERROR)
     {
-        ret = send_hil_gps(time_usec, lat_lon_alt, vel_e, vel, cog, eph, epv, fix_type, num_sats);
+        ret = send_hil_gps(time_usec, gps, gps_speed, vel, cog, eph, epv, fix_type, num_sats);
         hil_gps_update = time_usec + (uint64_t)(1000000.0 / hil_gps_freq);
     }
 
@@ -1005,7 +946,7 @@ int send_hil_messages(uint64_t time_usec, double q[4], double lat_lon_alt[3], do
  *      This function will return 1 when the message has been sent.
  *      If an error ocurred, -1 will be returned.
  */
-int send_hil_state(uint64_t time_usec, double q[4], double euler_rates[3], double lat_lon_alt[3], double vel_e[3], double acc_b[3])
+int send_hil_state(uint64_t time_usec, double q[4], double euler_rates[3], double lat_lon_alt[3], double vel_e[3], double acc_b[3], double dcm_be[3][3])
 {
     mavlink_hil_state_quaternion_t hil_state;
     hil_state.time_usec = time_usec;
@@ -1022,9 +963,9 @@ int send_hil_state(uint64_t time_usec, double q[4], double euler_rates[3], doubl
     hil_state.vx = (int16_t)(vel_e[0]*100);
     hil_state.vy = (int16_t)(vel_e[1]*100);
     hil_state.vz = (int16_t)(vel_e[2]*100);
-    hil_state.xacc = (int16_t)(acc_b[0] * 1000.0f / 9.81f);
-    hil_state.yacc = (int16_t)(acc_b[1] * 1000.0f / 9.81f);
-    hil_state.zacc = (int16_t)(acc_b[2] * 1000.0f / 9.81f);
+    hil_state.xacc = (int16_t)((acc_b[0] + (dcm_be[0][2] * (-GRAVITY))) * 1000.0f);
+    hil_state.yacc = (int16_t)((acc_b[1] + (dcm_be[1][2] * (-GRAVITY))) * 1000.0f);
+    hil_state.zacc = (int16_t)((acc_b[2] + (dcm_be[2][2] * (-GRAVITY))) * 1000.0f);
     hil_state.true_airspeed = (uint16_t)(sqrt(pow(vel_e[0], 2) + pow(vel_e[1], 2) + pow(vel_e[2], 2)) * 100);
 
     mavlink_message_t message;
