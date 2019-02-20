@@ -21,6 +21,8 @@
 #define DEBUG_SIM ENABLED
 // #define DEBUG_SIM DISABLED
 
+#define DEBUG_ACTUATORS DISABLED
+
 #define DEFAULT_HIL_COM_PORT "/dev/ttyACM0"
 #define DEFAULT_HIL_BAUD B921600
 
@@ -766,16 +768,18 @@ void show_command_long(mavlink_message_t *message)
  */
 void show_actuators(mavlink_message_t *message)
 {
-    // int i;
-    // mavlink_hil_actuator_controls_t hil_actuators;
-    // mavlink_msg_hil_actuator_controls_decode(message, &hil_actuators);
+#if DEBUG_ACTUATORS == ENABLED
+    int i;
+    mavlink_hil_actuator_controls_t hil_actuators;
+    mavlink_msg_hil_actuator_controls_decode(message, &hil_actuators);
 
-    // if(hil_actuators.controls[0] != hil_actuators.controls[1] || hil_actuators.controls[2] != hil_actuators.controls[3] || hil_actuators.controls[0] != hil_actuators.controls[3])
-    // {
-    //     for(i = 0 ; i < 4 ; i++)
-    //         printf("%2.3f\t", hil_actuators.controls[i]);
-    //     printf("\n");
-    // }
+    if(hil_actuators.controls[0] != hil_actuators.controls[1] || hil_actuators.controls[2] != hil_actuators.controls[3] || hil_actuators.controls[0] != hil_actuators.controls[3])
+    {
+        for(i = 0 ; i < 4 ; i++)
+            printf("%2.3f\t", hil_actuators.controls[i]);
+        printf("\n");
+    }
+#endif
 }
 
 /* Function: write_message ===============================================
