@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <termios.h>
 #include <arpa/inet.h>
+#include <netinet/tcp.h>
 #include <sys/socket.h>
 #include <poll.h>
 #include <fcntl.h>
@@ -96,7 +97,6 @@ int connect_serial(int *fc_serial_fd, struct termios *fc_serial_config, char *co
 int configure_serial(int *fc_serial_fd, struct termios *fc_serial_config, int baud);
 
 int connect_ip(int *ip_fd, struct sockaddr_in *ip_addr_in, char *server, int port, bool is_tcp);
-int configure_ip(int *ip_fd, struct sockaddr_in *ip_addr_in, char *server, int port, bool is_tcp);
 
 int get_poll_index();
 
@@ -366,47 +366,51 @@ int configure_serial(int *fc_serial_fd, struct termios *fc_serial_config, int ba
  */
 int connect_ip(int *ip_fd, struct sockaddr_in *ip_addr_in, char *server, int port, bool is_tcp)
 {
-    if(is_tcp) {
-        *ip_fd = socket(PF_INET, SOCK_STREAM, 0);
-    } else {
-        *ip_fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-    }
-
-    if(*ip_fd < 0)
-    {
-        return ERROR_CONNECT;
-    }
-
-    return configure_ip(ip_fd, ip_addr_in, server, port, is_tcp);
-}
-
-/* Function: configure_ip ===============================================
- * Abstract:
- *      Configures the given IP connection.
- * 
- * Parameters:
- *      - ip_fd: the IP file descriptor
- *      - ip_addr_in: the IP socket address configuration
- *      - server: the server to connect to
- *      - port: the port to connect to
- * 
- * Returns:
- *      0 if no error occurred.
- */
-int configure_ip(int *ip_fd, struct sockaddr_in *ip_addr_in, char *server, int port, bool is_tcp)
-{
     int result = 0;
 
-    ip_addr_in->sin_family = AF_INET;
-    ip_addr_in->sin_port = htons(port);
-
-    if (inet_aton(server, &(ip_addr_in->sin_addr)) == 0) 
-    {
-        return ERROR_SERVER;
-    }
-
     if(is_tcp) {
-        result = connect(*ip_fd, (struct sockaddr*) ip_addr_in, sizeof(*ip_addr_in));
+        int _fd;
+        struct sockaddr_in _myaddr;
+        socklen_t _myaddr_len;
+
+        _fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+
+        memset(&_myaddr, 0, sizeof(_myaddr));
+        _myaddr.sin_family = AF_INET;
+        _myaddr.sin_addr.s_addr = inet_addr(server);
+        _myaddr.sin_port = htons(port);
+        _myaddr_len = sizeof(_myaddr);
+
+        int yes = 1;
+        result = setsockopt(_fd, IPPROTO_TCP, TCP_NODELAY, (char *)&yes, sizeof(yes));
+        if(result < 0)
+            return result;
+
+        result = bind(_fd, (struct sockaddr*) &_myaddr, _myaddr_len);
+        if(result < 0)
+            return result;
+
+        result = listen(_fd, 0);
+        if(result < 0)
+            return result;
+
+        ip_addr_in->sin_family = AF_INET;
+        ip_addr_in->sin_addr.s_addr = inet_addr(server);
+        ip_addr_in->sin_port = htons(port);
+        socklen_t socklen = sizeof(*ip_addr_in);
+        *ip_fd = accept(_fd, (struct sockaddr*) ip_addr_in, &socklen);
+        if(*ip_fd < 0)
+            return ERROR_CONNECT;
+
+    } else {
+        *ip_fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+
+        ip_addr_in->sin_family = AF_INET;
+        ip_addr_in->sin_addr.s_addr = inet_addr(server);
+        ip_addr_in->sin_port = htons(port);
+
+        if(*ip_fd < 0)
+            return ERROR_CONNECT;
     }
 
     return result;
@@ -492,7 +496,7 @@ int write_bytes(uint8_t *buffer, uint16_t len, uint8_t poll_id)
     else if(poll_id == SIL_POLL_AP)
     {
         int result = sendto(sitl_tcp_fd, buffer, len, 0, (struct sockaddr *)&sitl_tcp_addr_in, sizeof(sitl_tcp_addr_in));
-
+        
         if(result < 0)
         {
             return ERROR_WRITE_FAIL;
@@ -543,7 +547,7 @@ int read_message(mavlink_message_t *message, uint8_t poll_id)
     {
         for(uint8_t i = 0 ; i < read_result ; i++)
         {
-            msg_received = mavlink_parse_char(MAVLINK_COMM_1, buffer[i], message, &status);
+            msg_received = mavlink_parse_char(MAVLINK_COMM_0, buffer[i], message, &status);
             if(msg_received > 0)
             {
                 break;

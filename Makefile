@@ -7,8 +7,10 @@ _OBJ = sensors_model.o utils.o quad_model.o px4_sim_communication.o px4_quad_sim
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
 ODIR=obj
+DIR_GUARD=@mkdir -p $(@D)
 
 $(ODIR)/%.o: %.c $(DEPS)
+	$(DIR_GUARD)
 	$(CC) -c -o $@ $< $(CFLAGS)
 
 px4_quad_sim: $(OBJ)
@@ -17,4 +19,4 @@ px4_quad_sim: $(OBJ)
 .PHONY: clean
 
 clean:
-	rm -f $(ODIR)/*.o
+	rm -rf $(ODIR)
