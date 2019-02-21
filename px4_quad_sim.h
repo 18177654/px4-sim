@@ -5,6 +5,7 @@
 
 // Constants.
 #define HIL 0
+#define SIL_SPEED_FACTOR 5
 
 #define SENSOR_FREQ 400
 #define GPS_FREQ 50
@@ -14,6 +15,6 @@ Quad quad;
 
 // Function prototypes.
 int init_sim();
-int advance_sim(uint64_t time_usec, double dt, double wind_vel_e[3]);
+int advance_sim(uint64_t time_usec, uint64_t prev_time_usec, double wind_vel_e[3]);
 
 #endif

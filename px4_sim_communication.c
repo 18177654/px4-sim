@@ -145,7 +145,10 @@ int init_px4_sim(uint16_t sensor_freq, uint16_t gps_freq, int hil_enabled, float
  */
 void init_globals(int hil_enabled, float thrust_hover_norm, float max_thrust_force)
 {
-    time_usec_start = get_time_usec();
+    if(hil_enabled)
+        time_usec_start = get_time_usec(); // in HIL mode, use real time
+    else
+        time_usec_start = 0; // in SIL mode, use simulation time
 
     hil = hil_enabled;
 
@@ -913,7 +916,7 @@ int send_cmd_arm(uint8_t arm)
  *      Send all the HIL MAVLink messages.
  * 
  * Returns:
- *      This function will return 1 when the messages has been sent.
+ *      This function will return 0 when no error occurred and 1 if the HIL_SENSOR message has been sent.
  *      If an error ocurred, -1 will be returned.
  */
 int send_hil_messages(uint64_t time_usec, double q[4], double euler_rates[3], double acc_b[3], double dcm_be[3][3], double vel_e[3], double lat_lon_alt[3], double gps[3], double gps_speed[3], double vel, double cog, double eph, double epv, int fix_type, int num_sats, double accelerometer[3], double gyro[3], double mag[3], double pressure, double temperature)
@@ -922,21 +925,30 @@ int send_hil_messages(uint64_t time_usec, double q[4], double euler_rates[3], do
     static uint64_t hil_sensor_update = 0;
     static uint64_t hil_gps_update = 0;
 
-    int ret = 1;
-    if(hil_state_freq > 0 && (int64_t)(time_usec - hil_state_update) >= HIL_MSG_TIME_ERROR)
+    int ret = 0;
+    if(hil_state_freq >= 0 && (int64_t)(time_usec - hil_state_update) >= HIL_MSG_TIME_ERROR)
     {
         ret = send_hil_state(time_usec, q, euler_rates, lat_lon_alt, vel_e, acc_b, dcm_be);
         hil_state_update = time_usec + (uint64_t)(1000000.0 / hil_state_freq);
+
+        if(ret > 0)
+            ret = 0;
     }
-    if(ret > 0 && time_usec >= time_usec_start + hil_sensor_startup_delay * 1000 && (int64_t)(time_usec - hil_sensor_update) >= HIL_MSG_TIME_ERROR)
-    {
-        ret = send_hil_sensors(time_usec, accelerometer, gyro, mag, pressure, gps[2], temperature);
-        hil_sensor_update = time_usec + (uint64_t)(1000000.0 / hil_sensor_freq);
-    }
-    if(ret > 0 && time_usec >= time_usec_start + hil_gps_startup_delay * 1000 && (int64_t)(time_usec - hil_gps_update) >= HIL_MSG_TIME_ERROR)
+    if(ret >= 0 && time_usec >= time_usec_start + hil_gps_startup_delay * 1000 && (int64_t)(time_usec - hil_gps_update) >= HIL_MSG_TIME_ERROR)
     {
         ret = send_hil_gps(time_usec, gps, gps_speed, vel, cog, eph, epv, fix_type, num_sats);
         hil_gps_update = time_usec + (uint64_t)(1000000.0 / hil_gps_freq);
+
+        if(ret > 0)
+            ret = 0;
+    }
+    if(ret >= 0 && time_usec >= time_usec_start + hil_sensor_startup_delay * 1000 && (int64_t)(time_usec - hil_sensor_update) >= HIL_MSG_TIME_ERROR)
+    {
+        ret = send_hil_sensors(time_usec, accelerometer, gyro, mag, pressure, gps[2], temperature);
+        hil_sensor_update = time_usec + (uint64_t)(1000000.0 / hil_sensor_freq);
+
+        if(ret > 0)
+            ret = 1;
     }
 
     return ret;

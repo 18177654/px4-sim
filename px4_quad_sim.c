@@ -37,12 +37,13 @@ int init_sim()
     return init_px4_sim(SENSOR_FREQ, GPS_FREQ, HIL, THRUST_HOVER_NORM, THRUST_MAX_FORCE);
 }
 
-int advance_sim(uint64_t time_usec, double dt, double wind_vel_e[3])
+int advance_sim(uint64_t time_usec, uint64_t prev_time_usec, double wind_vel_e[3])
 {
     int i;
     int result;
     double latlonalt[3];
     double thrust_commands[4];
+    double dt;
 
     // Send HIL MAVLink messages
     ned_to_latlonalt(quad.state.pos_e, latlonalt, HOME_LAT, HOME_LON, HOME_ALT);
@@ -50,24 +51,29 @@ int advance_sim(uint64_t time_usec, double dt, double wind_vel_e[3])
     if(result < 0)
         return result;
 
-    // Gaurd against large dt's
-    // if(dt >= 2 * (double)(1.0 / SENSOR_FREQ))
-    // {
-    //     dt = 2.0 * (double)(1.0 / SENSOR_FREQ);
-    //     printf("changed dt: %2.3f ms\n", dt);
-    // }
+    if(result > 0)
+    {
+        dt = (double)((time_usec - prev_time_usec) * 1e-6);
+        
+        // Gaurd against large dt's
+        // if(dt >= 2 * (double)(1.0 / SENSOR_FREQ))
+        // {
+        //     dt = 2.0 * (double)(1.0 / SENSOR_FREQ);
+        //     printf("changed dt: %2.4f ms\n", dt);
+        // }
 
-    get_thrust_commands_force(thrust_commands);
-    update_quad(&quad, thrust_commands, wind_vel_e, dt);
+        get_thrust_commands_force(thrust_commands);
+        update_quad(&quad, thrust_commands, wind_vel_e, dt);
+    }
+
+    return result;
 }
 
 int main()
 {
     int i;
-    double dt;
     uint64_t cur_time;
     uint64_t prev_time;
-    uint64_t sensor_update;
     double wind_vel_e[3];
     int result;
     double excess_time;
@@ -85,37 +91,41 @@ int main()
     printf("Connected!\n");
 
     // Initialise variables
-    cur_time = get_time_usec();
+    if(HIL)
+        cur_time = get_time_usec(); // in HIL, use real time.
+    else
+        cur_time = 0; // in SIL, use simulation time
     prev_time = cur_time;
-    sensor_update = cur_time;
 
     for(i = 0 ; i < 3 ; i++)
         wind_vel_e[i] = 0.0f;
 
     // Loop
-    while(true)
+    while(result >= 0)
     {
         // Update the physics sim with a fixed time
-        cur_time = get_time_usec();
-        if((int64_t)(cur_time - sensor_update) >= 0)
-        {
-            dt = (double)((cur_time - prev_time) * 1e-6);
-            // printf("dt: %2.3f ms\n", dt * 1e3);
-            advance_sim(cur_time, dt, wind_vel_e);
+        if(HIL)
+            cur_time = get_time_usec();
+        else
+            cur_time += 1000000.0/SENSOR_FREQ;
+        
+        result = advance_sim(cur_time, prev_time, wind_vel_e);
+        if(result > 0)
             prev_time = cur_time;
-
-            // Calculate next time the physics sim should update
-            sensor_update = cur_time + (uint64_t)(1000000.0 / SENSOR_FREQ);
-        }
         
         // Poll for MAVLink messages: receive actuator controls from PX4 and when in HIL - send messages from autopilo to GCS and vice-versa.
         result = pollMavlinkMessage();
         if(result < 0)
             return result;
-        usleep(10); // 10 us
+        
+        // Sleep
+        if(HIL)
+            usleep(10); // 10 us
+        else
+            usleep((1000000.0/SENSOR_FREQ)/SIL_SPEED_FACTOR);
     }
 
-    // testQuadDynamics();
+    printf("Simulation terminated...\n");
     return 0;
 }
 
