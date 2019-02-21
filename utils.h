@@ -3,9 +3,9 @@
 
 #include <inttypes.h>
 
-#define ANSI_COLOR_MAGENTA "\x1b[35m"
-#define ANSI_COLOR_RESET   "\x1b[0m"
-#define LOG_MSG(M, ...)  printf((ANSI_COLOR_MAGENTA M ANSI_COLOR_RESET), ##__VA_ARGS__)
+#define ANSI_COLOR_CYAN    "\033[22;36m"
+#define ANSI_COLOR_RESET   "\033[39;49m"
+#define LOG_MSG(M, ...)  printf("%s" M "%s", ANSI_COLOR_CYAN, ##__VA_ARGS__, ANSI_COLOR_RESET)
 
 // Defines
 typedef double (*functiontype)(double[], int);
