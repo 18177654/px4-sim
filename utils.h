@@ -3,6 +3,10 @@
 
 #include <inttypes.h>
 
+#define ANSI_COLOR_MAGENTA "\x1b[35m"
+#define ANSI_COLOR_RESET   "\x1b[0m"
+#define LOG_MSG(M, ...)  printf((ANSI_COLOR_MAGENTA M ANSI_COLOR_RESET), ##__VA_ARGS__)
+
 // Defines
 typedef double (*functiontype)(double[], int);
 

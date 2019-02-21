@@ -644,7 +644,7 @@ int handleMessage(mavlink_message_t *message, int poll_index)
                 {
                     hil_state_freq = cmd.param2;
 #if DEBUG_SIM == ENABLED
-                    printf("HIL_STATE Interval: %.3f s (%.2f Hz)\n", hil_state_freq/1000000.0, 1000000.0/hil_state_freq);
+                    LOG_MSG("HIL_STATE Interval: %.3f s (%.2f Hz)\n", hil_state_freq/1000000.0, 1000000.0/hil_state_freq);
 #endif
                 }
             }
@@ -717,7 +717,7 @@ void show_message(mavlink_message_t *message)
     case MAVLINK_MSG_ID_HIL_ACTUATOR_CONTROLS:
         show_actuators(message);
     default:
-        // printf("Got message with ID: %ld\n", message->msgid);
+        // LOG_MSG("Got message with ID: %ld\n", message->msgid);
         break;
     }
 }
@@ -731,7 +731,7 @@ void show_message(mavlink_message_t *message)
  */
 void show_heartbeat(mavlink_message_t *message)
 {
-    printf("Received heartbeat (%.4f)...\n", ((float)time_usec) / 1000000.0);
+    LOG_MSG("Received heartbeat (%.4f)...\n", ((float)time_usec) / 1000000.0);
 }
 
 /* Function: show_statustext ===============================================
@@ -745,7 +745,7 @@ void show_statustext(mavlink_message_t *message)
 {
     mavlink_statustext_t statustext;
     mavlink_msg_statustext_decode(message, &statustext);
-    printf("FC Message: %s\n", statustext.text);
+    LOG_MSG("FC Message: %s\n", statustext.text);
 }
 
 /* Function: show_command_long ===============================================
@@ -759,7 +759,7 @@ void show_command_long(mavlink_message_t *message)
 {
     mavlink_command_long_t cmd;
     mavlink_msg_command_long_decode(message, &cmd);
-    printf("Command received(%.4f): %d\n", ((float)time_usec) / 1000000.0, cmd.command);
+    LOG_MSG("Command received(%.4f): %d\n", ((float)time_usec) / 1000000.0, cmd.command);
 }
 
 /* Function: show_actuators ===============================================
@@ -779,8 +779,8 @@ void show_actuators(mavlink_message_t *message)
     if(hil_actuators.controls[0] != hil_actuators.controls[1] || hil_actuators.controls[2] != hil_actuators.controls[3] || hil_actuators.controls[0] != hil_actuators.controls[3])
     {
         for(i = 0 ; i < 4 ; i++)
-            printf("%2.3f\t", hil_actuators.controls[i]);
-        printf("\n");
+            LOG_MSG("%2.3f\t", hil_actuators.controls[i]);
+        LOG_MSG("\n");
     }
 #endif
 }

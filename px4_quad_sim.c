@@ -59,7 +59,7 @@ int advance_sim(uint64_t time_usec, uint64_t prev_time_usec, double wind_vel_e[3
         // if(dt >= 2 * (double)(1.0 / SENSOR_FREQ))
         // {
         //     dt = 2.0 * (double)(1.0 / SENSOR_FREQ);
-        //     printf("changed dt: %2.4f ms\n", dt);
+        //     LOG_MSG("changed dt: %2.4f ms\n", dt);
         // }
 
         get_thrust_commands_force(thrust_commands);
@@ -81,14 +81,14 @@ int main()
     signal(SIGINT, sighandler); // Exit simulation if Ctrl-C is pressed
 
     // Connect to PX4 and initialize physics sim
-    printf("Connecting to PX4...\n");
+    LOG_MSG("Connecting to PX4...\n");
     result = init_sim();
     if(result < 0)
     {
-        printf("Failed! Result: %d\n", result);
+        LOG_MSG("Failed! Result: %d\n", result);
         return 0;
     }
-    printf("Connected!\n");
+    LOG_MSG("Connected!\n");
 
     // Initialise variables
     if(HIL)
@@ -125,13 +125,13 @@ int main()
             usleep((1000000.0/SENSOR_FREQ)/SIL_SPEED_FACTOR);
     }
 
-    printf("Simulation terminated...\n");
+    LOG_MSG("Simulation terminated...\n");
     return 0;
 }
 
 void sighandler(int sig)
 {
-   printf("\nExit simulation...\n");
+   LOG_MSG("\nExit simulation...\n");
    disconnect_sim();
    exit(1);
 }
@@ -197,69 +197,69 @@ void printStates(Quad *quad)
 {
     int i;
 
-    printf("Acceleration (Body):\n");
+    LOG_MSG("Acceleration (Body):\n");
     for(i = 0 ; i < 3 ; i++)
-        printf("%4.9f\t", quad->state.acc_b[i]);
-    printf("\n");
+        LOG_MSG("%4.9f\t", quad->state.acc_b[i]);
+    LOG_MSG("\n");
 
-    printf("Velocity (Body):\n");
+    LOG_MSG("Velocity (Body):\n");
     for(i = 0 ; i < 3 ; i++)
-        printf("%4.9f\t", quad->state.vel_b[i]);
-    printf("\n");
+        LOG_MSG("%4.9f\t", quad->state.vel_b[i]);
+    LOG_MSG("\n");
 
-    printf("Omega (Body):\n");
+    LOG_MSG("Omega (Body):\n");
     for(i = 0 ; i < 3 ; i++)
-        printf("%4.9f\t", quad->state.omega_b[i]);
-    printf("\n");
+        LOG_MSG("%4.9f\t", quad->state.omega_b[i]);
+    LOG_MSG("\n");
 
-    printf("Euler:\n");
+    LOG_MSG("Euler:\n");
     for(i = 0 ; i < 3 ; i++)
-        printf("%4.9f\t", quad->state.euler[i] * (180.0 / M_PI));
-    printf("\n");
+        LOG_MSG("%4.9f\t", quad->state.euler[i] * (180.0 / M_PI));
+    LOG_MSG("\n");
 
-    printf("Velocity (earth):\n");
+    LOG_MSG("Velocity (earth):\n");
     for(i = 0 ; i < 3 ; i++)
-        printf("%4.9f\t", quad->state.vel_e[i]);
-    printf("\n");
+        LOG_MSG("%4.9f\t", quad->state.vel_e[i]);
+    LOG_MSG("\n");
 
-    printf("Position (earth):\n");
+    LOG_MSG("Position (earth):\n");
     for(i = 0 ; i < 3 ; i++)
-        printf("%4.9f\t", quad->state.pos_e[i]);
-    printf("\n");
+        LOG_MSG("%4.9f\t", quad->state.pos_e[i]);
+    LOG_MSG("\n");
 
-    printf("\n");
+    LOG_MSG("\n");
 }
 
 void printSensors(Quad *quad)
 {
     int i;
 
-    printf("Accelerometer:\n");
+    LOG_MSG("Accelerometer:\n");
     for(i = 0 ; i < 3 ; i++)
-        printf("%4.6f\t", quad->sensors.imu.acc[i]);
-    printf("\n");
+        LOG_MSG("%4.6f\t", quad->sensors.imu.acc[i]);
+    LOG_MSG("\n");
 
-    printf("Gyro:\n");
+    LOG_MSG("Gyro:\n");
     for(i = 0 ; i < 3 ; i++)
-        printf("%4.6f\t", quad->sensors.imu.gyro[i]);
-    printf("\n");
+        LOG_MSG("%4.6f\t", quad->sensors.imu.gyro[i]);
+    LOG_MSG("\n");
 
-    printf("Barometer:\n");
-    printf("%4.6f\t", quad->sensors.baro.pressure);
-    printf("\n");
+    LOG_MSG("Barometer:\n");
+    LOG_MSG("%4.6f\t", quad->sensors.baro.pressure);
+    LOG_MSG("\n");
 
-    printf("Magnetometer:\n");
+    LOG_MSG("Magnetometer:\n");
     for(i = 0 ; i < 3 ; i++)
-        printf("%4.6f\t", quad->sensors.mag.mag_field[i]);
-    printf("\n");
+        LOG_MSG("%4.6f\t", quad->sensors.mag.mag_field[i]);
+    LOG_MSG("\n");
 
-    printf("GPS:\n");
+    LOG_MSG("GPS:\n");
     for(i = 0 ; i < 3 ; i++)
-        printf("%4.6f\t", quad->sensors.gps.lat_lon_alt[i]);
-    printf("\n");
+        LOG_MSG("%4.6f\t", quad->sensors.gps.lat_lon_alt[i]);
+    LOG_MSG("\n");
 
-    printf("GPS Speed:\n");
+    LOG_MSG("GPS Speed:\n");
     for(i = 0 ; i < 3 ; i++)
-        printf("%4.6f\t", quad->sensors.gps.gps_speed[i]);
-    printf("\n\n");
+        LOG_MSG("%4.6f\t", quad->sensors.gps.gps_speed[i]);
+    LOG_MSG("\n\n");
 }
