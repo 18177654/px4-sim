@@ -113,7 +113,7 @@ int main()
         if(result > 0)
             prev_time = cur_time;
         
-        // Poll for MAVLink messages: receive actuator controls from PX4 and when in HIL - send messages from autopilo to GCS and vice-versa.
+        // Poll for MAVLink messages: receive actuator controls from PX4 and when in HIL - send messages from autopilot to GCS and vice-versa.
         result = pollMavlinkMessage();
         if(result < 0)
             return result;

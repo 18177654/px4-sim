@@ -227,8 +227,8 @@ void forces_moments_thrust_model_cross(double dt, double thrust_commands[4], Qua
     forces[1] = 0.0f;
     forces[2] = -(quad->thrust[0]+quad->thrust[1]+quad->thrust[2]+quad->thrust[3]);
 
-    moments[0] = quad->d * (-quad->thrust[0] + quad->thrust[1] + quad->thrust[2] - quad->thrust[3]);
-    moments[1] = quad->d * (quad->thrust[0] - quad->thrust[1] + quad->thrust[2] - quad->thrust[3]);
+    moments[0] = quad->d * (1.0/sqrt(2.0)) * (-quad->thrust[0] + quad->thrust[1] + quad->thrust[2] - quad->thrust[3]);
+    moments[1] = quad->d * (1.0/sqrt(2.0)) * (quad->thrust[0] - quad->thrust[1] + quad->thrust[2] - quad->thrust[3]);
     moments[2] = quad->r_d * (quad->thrust[0]+quad->thrust[1]-quad->thrust[2]-quad->thrust[3]);
 }
 

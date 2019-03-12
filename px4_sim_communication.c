@@ -86,11 +86,11 @@ int8_t mav_comp_id; // The component ID of the simulator
 bool armed; // Indicates whether the autopilot is armed
 bool hover_reached; // Indicates whether the hover throttle has been reached or not.
 
-float thrust_hover;
-float max_thrust;
+double thrust_hover;
+double max_thrust;
 
 // Function prototypes.
-void init_globals(int hil_enabled, float thrust_hover_norm, float max_thrust_force);
+void init_globals(int hil_enabled, double thrust_hover_norm, double max_thrust_force);
 
 int connect_sim();
 
@@ -124,7 +124,7 @@ int send_hil_gps(uint64_t time_usec, double lat_lon_alt[3], double vel_e[3], dou
 
 // Function definitions.
 
-int init_px4_sim(uint16_t sensor_freq, uint16_t gps_freq, int hil_enabled, float thrust_hover_norm, float max_thrust_force)
+int init_px4_sim(uint16_t sensor_freq, uint16_t gps_freq, int hil_enabled, double thrust_hover_norm, double max_thrust_force)
 {
     // Initialize globals.
     init_globals(hil_enabled, thrust_hover_norm, max_thrust_force);
@@ -143,7 +143,7 @@ int init_px4_sim(uint16_t sensor_freq, uint16_t gps_freq, int hil_enabled, float
  *      hil_enabled - 1 for HIL; 0 for SIL
  *      thrust_hover - the thrust at which the quad hovers (0.0 - 1.0)
  */
-void init_globals(int hil_enabled, float thrust_hover_norm, float max_thrust_force)
+void init_globals(int hil_enabled, double thrust_hover_norm, double max_thrust_force)
 {
     if(hil_enabled)
         time_usec_start = get_time_usec(); // in HIL mode, use real time
@@ -237,6 +237,9 @@ int connect_sim()
  */
 void disconnect_sim()
 {
+    // Sleep, allow all buffered sending data to be sent
+    usleep(0.5*1e6);
+    
     if(hil)
     {
         if (fc_serial_fd >= 0)
@@ -249,7 +252,10 @@ void disconnect_sim()
     else
     {
         if(sitl_tcp_fd >= 0)
+        {
+            shutdown(sitl_tcp_fd, SHUT_RDWR);
             close(sitl_tcp_fd);
+        }
     }
 }
 
@@ -395,9 +401,12 @@ int connect_ip(int *ip_fd, struct sockaddr_in *ip_addr_in, char *server, int por
         ip_addr_in->sin_port = htons(port);
         socklen_t socklen = sizeof(*ip_addr_in);
         *ip_fd = accept(_fd, (struct sockaddr*) ip_addr_in, &socklen);
+        
+        shutdown(_fd, SHUT_RDWR);
+        close(_fd);
+        
         if(*ip_fd < 0)
             return ERROR_CONNECT;
-
     } else {
         *ip_fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 
