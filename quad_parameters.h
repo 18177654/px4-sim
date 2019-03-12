@@ -10,7 +10,7 @@
 #define HOME_ALT 488.0
 #define HOME_YAW 0.0*M_PI/180.0
 
-#define NOISE 1
+#define NOISE 0
 
 // Quad physical properties
 #define MASS 4.5

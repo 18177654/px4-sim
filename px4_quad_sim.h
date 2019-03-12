@@ -5,7 +5,7 @@
 
 // Constants.
 #define HIL 0
-#define SIL_SPEED_FACTOR 5
+#define SIL_SPEED_FACTOR 3
 
 #define SENSOR_FREQ 400
 #define GPS_FREQ 50
