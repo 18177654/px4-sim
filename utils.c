@@ -56,6 +56,16 @@ double rand_gauss(double mean, double std_dev)
     return (mean + std_dev * (double)X1);
 }
 
+double constrain(double val, double min, double max)
+{
+    if(val < min)
+        return min;
+    else if(val > max)
+        return max;
+    else
+        return val;
+}
+
 void ned_to_latlonalt(double ned[3], double latlonalt[3], double home_lat, double home_lon, double home_alt)
 {
     latlonalt[0] =  (rad2deg((ned[0]/R_EARTH)) + home_lat);

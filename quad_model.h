@@ -39,7 +39,7 @@ typedef struct
 } Quad;
 
 void init_quad(Quad *quad, double mass, double inertia[3], double d, double r_d, double c_d[3], double thrust_tc, double throttle_hover, double init_yaw);
-void init_quad_sensors(Quad *quad, double eph, double epv, double fix, double visible_sats, double lat_lon_noise_std_dev, double alt_noise_std_dev, double speed_noise_std_dev, double acc_noise_std_dev, double gyro_noise_std_dev, double mag_decl, double mag_incl, double mag_scale, double mag_noise_std_dev, double temperature);
+void init_quad_sensors(Quad *quad, double eph, double epv, double fix, double visible_sats, double lat_lon_noise_std_dev, double alt_noise_std_dev, double speed_noise_std_dev, double acc_noise_std_dev, double gyro_noise_std_dev, double mag_noise_std_dev, double temperature);
 
 void six_dof(double dt, Quad *quad, double forces[3], double moments[3]);
 

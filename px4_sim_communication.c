@@ -1021,7 +1021,7 @@ int send_hil_sensors(uint64_t time_usec, double acc_b[3], double gyro[3], double
     hil_sensor.ymag = (float)(mag[1]);
     hil_sensor.zmag = (float)(mag[2]);
     hil_sensor.abs_pressure = (float)(pressure * 0.01);
-    hil_sensor.pressure_alt = (float)(alt * 1e3);
+    hil_sensor.pressure_alt = (float)(alt);
     hil_sensor.temperature = (float)temperature;
     hil_sensor.fields_updated = 0x1FFF;
 

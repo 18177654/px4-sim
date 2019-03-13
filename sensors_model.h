@@ -32,10 +32,6 @@ typedef struct
 typedef struct
 {
     double mag_noise_std_dev;
-    double mag_scale;
-    double mag_decl; // magnetic declination (deg)
-    double mag_incl; // magnetic inclination (deg)
-
     double mag_field[3]; // magnetic field (gauss)
 } MagSensor;
 
@@ -61,8 +57,8 @@ void update_gps(GpsSensor *gps, double pos_e[3], double vel_e[3]);
 void init_imu(ImuSensor *imu, double acc_noise_std_dev, double gyro_noise_std_dev);
 void update_imu(ImuSensor *imu, double acc_b[3], double omega_b[3], double dcm_be[3][3]);
 
-void init_mag(MagSensor *mag, double mag_decl, double mag_incl, double mag_scale, double mag_noise_std_dev);
-void update_mag(MagSensor *mag, double dcm_be[3][3]);
+void init_mag(MagSensor *mag, double mag_noise_std_dev);
+void update_mag(MagSensor *mag, double lat, double lon, double dcm_be[3][3]);
 
 void init_baro(BaroSensor *baro, double temperature);
 void update_baro(BaroSensor *baro, double noisy_alt);

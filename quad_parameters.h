@@ -38,9 +38,6 @@
 #define IMU_ACC_NOISE 0.05
 #define IMU_GYRO_NOISE 0.01
 
-#define MAG_DECL 2.13
-#define MAG_INCL 63.32
-#define MAG_SCALE 2
 #define MAG_NOISE 0.005
 
 #define BARO_TEMP 32
