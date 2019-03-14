@@ -40,6 +40,6 @@
 
 #define MAG_NOISE 0.005
 
-#define BARO_TEMP 32
+#define BARO_NOISE 0.01
 
 #endif

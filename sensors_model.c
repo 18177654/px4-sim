@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
+#include <stdbool.h>
 
 #include "sensors_model.h"
 #include "quad_parameters.h"
@@ -23,6 +24,7 @@ float get_mag_inclination(float lat, float lon);
 float get_mag_strength(float lat, float lon);
 
 void calc_mag_field(double lat, double lon, double dcm_be[3][3], double mag_field[3]);
+void calc_baro(BaroSensor *baro, double alt, double vel_b_x, double noise);
 
 /*
  * Calculation / lookup table for Earth's magnetic field declination (deg), inclination (deg) and strength (centi-Tesla).
@@ -160,12 +162,12 @@ void init_gps(GpsSensor *gps, double eph, double epv, double fix, double visible
 void update_gps(GpsSensor *gps, double pos_e[3], double vel_e[3])
 {
     int i;
-
+    
     // Convert NED to lat lon alt
     ned_to_latlonalt(pos_e, gps->lat_lon_alt, HOME_LAT, HOME_LON, HOME_ALT);
 
     // Add noise
-    gps->lat_lon_alt[0] =  gps->lat_lon_alt[0] + ((NOISE != 0 ) ? zero_mean_noise(gps->lat_lon_noise_std_dev) : 0);
+    gps->lat_lon_alt[0] = gps->lat_lon_alt[0] + ((NOISE != 0 ) ? zero_mean_noise(gps->lat_lon_noise_std_dev) : 0);
     gps->lat_lon_alt[1] = gps->lat_lon_alt[1] + ((NOISE != 0 ) ? zero_mean_noise(gps->lat_lon_noise_std_dev) : 0);
     gps->lat_lon_alt[2] = gps->lat_lon_alt[2] + ((NOISE != 0 ) ? zero_mean_noise(gps->alt_noise_std_dev) : 0);
 
@@ -240,11 +242,11 @@ void calc_mag_field(double lat, double lon, double dcm_be[3][3], double mag_fiel
     double mag_e[3];
     
     // Magnetic declination and inclination (radians)
-    declination_rad = deg2rad(get_mag_declination(rad2deg(lat), rad2deg(lon)));
-    inclination_rad = deg2rad(get_mag_inclination(rad2deg(lat), rad2deg(lon)));
+    declination_rad = deg2rad(get_mag_declination(lat, lon));
+    inclination_rad = deg2rad(get_mag_inclination(lat, lon));
 
     // Magnetic strength (10^5xnanoTesla)
-    strength_ga = 0.01f * get_mag_strength(rad2deg(lat), rad2deg(lon));
+    strength_ga = 0.01f * get_mag_strength(lat, lon);
 
     // Magnetic filed components are calculated by http://geomag.nrcan.gc.ca/mag_fld/comp-en.php
     H = strength_ga * cos(inclination_rad);
@@ -258,15 +260,39 @@ void calc_mag_field(double lat, double lon, double dcm_be[3][3], double mag_fiel
 
 // Barometer
 
-void init_baro(BaroSensor *baro, double temperature)
+void init_baro(BaroSensor *baro, double baro_noise_std_dev)
 {
-    baro->temperature = temperature;
-    baro->pressure_alt = HOME_ALT;
-    baro->pressure = Pb * pow((Tb / (Tb + (Lb * HOME_ALT))), ((GRAVITY * M) / (R * Lb)));
+    baro->baro_noise_std_dev = baro_noise_std_dev;
+    calc_baro(baro, HOME_ALT, 0, 0);
 }
 
-void update_baro(BaroSensor *baro, double noisy_alt)
+void update_baro(BaroSensor *baro, double alt, double vel_b_x)
 {
-    baro->pressure_alt = noisy_alt;
-    baro->pressure = Pb * pow((Tb / (Tb + (Lb * noisy_alt))), ((GRAVITY * M) / (R * Lb)));
+    double noise = ((NOISE != 0 ) ? zero_mean_noise(baro->baro_noise_std_dev) : 0);
+    calc_baro(baro, alt, vel_b_x, noise);
+}
+
+void calc_baro(BaroSensor *baro, double alt, double vel_b_x, double noise)
+{
+    double lapse_rate, temperature_msl, pressure_msl;
+    double temperature_local, pressure_ratio;
+    double density_ratio;
+    double rho;
+    
+    // Calculate abs_pressure using an ISA model for the tropsphere (valid up to 11km above MSL)
+    lapse_rate = -Lb;
+    temperature_msl = Tb;
+    pressure_msl = Pb;
+
+    temperature_local = temperature_msl - lapse_rate * alt;
+    pressure_ratio = pow((temperature_msl/temperature_local) , -((GRAVITY * M) / (R * Lb)));
+
+    // Calculate density using an ISA model for the tropsphere (valid up to 11km above MSL)
+    density_ratio = powf((temperature_msl/temperature_local) , 4.256f);
+    rho = RHO / density_ratio;
+
+    baro->pressure = 0.01 * ((pressure_msl / pressure_ratio) + noise);
+    baro->pressure_alt = alt - noise / (GRAVITY * rho);
+    baro->diff_pressure = 0.005 * rho * pow(vel_b_x, 2);
+    baro->temperature = temperature_local - 273.0;
 }

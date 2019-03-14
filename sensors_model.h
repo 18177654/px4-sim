@@ -37,9 +37,12 @@ typedef struct
 
 typedef struct
 {
+    double baro_noise_std_dev;
+
     double temperature; // degC
     double pressure; // barometric pressure (Pa)
-    double pressure_alt; // altitude (m)
+    double diff_pressure; // Differential pressure
+    double pressure_alt; // Altitude from pressure
 } BaroSensor;
 
 typedef struct
@@ -60,7 +63,7 @@ void update_imu(ImuSensor *imu, double acc_b[3], double omega_b[3], double dcm_b
 void init_mag(MagSensor *mag, double mag_noise_std_dev);
 void update_mag(MagSensor *mag, double lat, double lon, double dcm_be[3][3]);
 
-void init_baro(BaroSensor *baro, double temperature);
-void update_baro(BaroSensor *baro, double noisy_alt);
+void init_baro(BaroSensor *baro, double baro_noise_std_dev);
+void update_baro(BaroSensor *baro, double alt, double vel_b_x);
 
 #endif

@@ -82,12 +82,12 @@ void init_quad(Quad *quad, double mass, double inertia[3], double d, double r_d,
     euler_to_quat(quad->state.euler, quad->state.quat);
 }
 
-void init_quad_sensors(Quad *quad, double eph, double epv, double fix, double visible_sats, double lat_lon_noise_std_dev, double alt_noise_std_dev, double speed_noise_std_dev, double acc_noise_std_dev, double gyro_noise_std_dev, double mag_noise_std_dev, double temperature)
+void init_quad_sensors(Quad *quad, double eph, double epv, double fix, double visible_sats, double lat_lon_noise_std_dev, double alt_noise_std_dev, double speed_noise_std_dev, double acc_noise_std_dev, double gyro_noise_std_dev, double mag_noise_std_dev, double baro_noise_std_dev)
 {
     init_gps(&(quad->sensors.gps), eph, epv, fix, visible_sats, lat_lon_noise_std_dev, alt_noise_std_dev, speed_noise_std_dev);
     init_imu(&(quad->sensors.imu), acc_noise_std_dev, gyro_noise_std_dev);
     init_mag(&(quad->sensors.mag), mag_noise_std_dev);
-    init_baro(&(quad->sensors.baro), temperature);
+    init_baro(&(quad->sensors.baro), baro_noise_std_dev);
 }
 
 void six_dof(double dt, Quad *quad, double forces[3], double moments[3])
@@ -268,7 +268,7 @@ void update_sensors(Quad *quad)
     update_gps(&(quad->sensors.gps), quad->state.pos_e, quad->state.vel_e);
     update_imu(&(quad->sensors.imu), quad->state.acc_b, quad->state.omega_b, quad->state.dcm_be);
     update_mag(&(quad->sensors.mag), quad->sensors.gps.lat_lon_alt[0], quad->sensors.gps.lat_lon_alt[1], quad->state.dcm_be);
-    update_baro(&(quad->sensors.baro), quad->sensors.gps.lat_lon_alt[2]);
+    update_baro(&(quad->sensors.baro), quad->sensors.gps.lat_lon_alt[2], quad->state.vel_b[0]);
 }
 
 // Differential functions.

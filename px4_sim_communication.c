@@ -119,7 +119,7 @@ int send_cmd_ack(uint16_t cmd, uint8_t result);
 int send_cmd_set_mode();
 int send_cmd_arm(uint8_t arm);
 int send_hil_state(uint64_t time_usec, double q[4], double euler_rates[3], double lat_lon_alt[3], double vel_e[3], double acc_b[3], double dcm_be[3][3]);
-int send_hil_sensors(uint64_t time_usec, double acc_b[3], double gyro[3], double mag[3], double pressure, double alt, double temperature);
+int send_hil_sensors(uint64_t time_usec, double acc_b[3], double gyro[3], double mag[3], double abs_pressure, double diff_pressure, double alt, double temperature);
 int send_hil_gps(uint64_t time_usec, double lat_lon_alt[3], double vel_e[3], double vel, double cog, double eph, double epv, int fix_type, int num_sats);
 
 // Function definitions.
@@ -928,7 +928,7 @@ int send_cmd_arm(uint8_t arm)
  *      This function will return 0 when no error occurred and 1 if the HIL_SENSOR message has been sent.
  *      If an error ocurred, -1 will be returned.
  */
-int send_hil_messages(uint64_t time_usec, double q[4], double euler_rates[3], double acc_b[3], double dcm_be[3][3], double vel_e[3], double lat_lon_alt[3], double gps[3], double gps_speed[3], double vel, double cog, double eph, double epv, int fix_type, int num_sats, double accelerometer[3], double gyro[3], double mag[3], double pressure, double temperature)
+int send_hil_messages(uint64_t time_usec, double q[4], double euler_rates[3], double acc_b[3], double dcm_be[3][3], double vel_e[3], double lat_lon_alt[3], double gps[3], double gps_speed[3], double vel, double cog, double eph, double epv, int fix_type, int num_sats, double accelerometer[3], double gyro[3], double mag[3], double abs_pressure, double diff_pressure, double pressure_alt, double temperature)
 {
     static uint64_t hil_state_update = 0;
     static uint64_t hil_sensor_update = 0;
@@ -953,7 +953,7 @@ int send_hil_messages(uint64_t time_usec, double q[4], double euler_rates[3], do
     }
     if(ret >= 0 && time_usec >= time_usec_start + hil_sensor_startup_delay * 1000 && (int64_t)(time_usec - hil_sensor_update) >= HIL_MSG_TIME_ERROR)
     {
-        ret = send_hil_sensors(time_usec, accelerometer, gyro, mag, pressure, gps[2], temperature);
+        ret = send_hil_sensors(time_usec, accelerometer, gyro, mag, abs_pressure, diff_pressure, pressure_alt, temperature);
         hil_sensor_update = time_usec + (uint64_t)(1000000.0 / hil_sensor_freq);
 
         if(ret > 0)
@@ -1007,7 +1007,7 @@ int send_hil_state(uint64_t time_usec, double q[4], double euler_rates[3], doubl
  *      This function will return 1 when the message has been sent.
  *      If an error ocurred, -1 will be returned.
  */
-int send_hil_sensors(uint64_t time_usec, double acc_b[3], double gyro[3], double mag[3], double pressure, double alt, double temperature)
+int send_hil_sensors(uint64_t time_usec, double acc_b[3], double gyro[3], double mag[3], double abs_pressure, double diff_pressure, double alt, double temperature)
 {
     mavlink_hil_sensor_t hil_sensor;
     hil_sensor.time_usec = time_usec;
@@ -1020,8 +1020,9 @@ int send_hil_sensors(uint64_t time_usec, double acc_b[3], double gyro[3], double
     hil_sensor.xmag = (float)(mag[0]);
     hil_sensor.ymag = (float)(mag[1]);
     hil_sensor.zmag = (float)(mag[2]);
-    hil_sensor.abs_pressure = (float)(pressure * 0.01);
+    hil_sensor.abs_pressure = (float)(abs_pressure);
     hil_sensor.pressure_alt = (float)(alt);
+    hil_sensor.diff_pressure = (float)(diff_pressure);
     hil_sensor.temperature = (float)temperature;
     hil_sensor.fields_updated = 0x1FFF;
 

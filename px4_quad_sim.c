@@ -31,7 +31,7 @@ int init_sim()
         c_d[i] = C_D;
 
     init_quad(&quad, MASS, inertia, D_ARM, R_D, c_d, THRUST_TC, THRUST_HOVER_NORM * THRUST_MAX_FORCE, HOME_YAW);
-    init_quad_sensors(&quad, GPS_EPH, GPS_EPV, GPS_FIX, GPS_NUM_SATS, GPS_LAT_LON_NOISE, GPS_ALT_NOISE, GPS_SPEED_NOISE, IMU_ACC_NOISE, IMU_GYRO_NOISE, MAG_NOISE, BARO_TEMP);
+    init_quad_sensors(&quad, GPS_EPH, GPS_EPV, GPS_FIX, GPS_NUM_SATS, GPS_LAT_LON_NOISE, GPS_ALT_NOISE, GPS_SPEED_NOISE, IMU_ACC_NOISE, IMU_GYRO_NOISE, MAG_NOISE, BARO_NOISE);
 
     // Initialise PX4 sim
     return init_px4_sim(SENSOR_FREQ, GPS_FREQ, HIL, THRUST_HOVER_NORM, THRUST_MAX_FORCE);
@@ -47,7 +47,7 @@ int advance_sim(uint64_t time_usec, uint64_t prev_time_usec, double wind_vel_e[3
 
     // Send HIL MAVLink messages
     ned_to_latlonalt(quad.state.pos_e, latlonalt, HOME_LAT, HOME_LON, HOME_ALT);
-    result = send_hil_messages(time_usec, quad.state.quat, quad.state.euler_rates, quad.state.acc_b, quad.state.dcm_be, quad.state.vel_e, latlonalt, quad.sensors.gps.lat_lon_alt, quad.sensors.gps.gps_speed, quad.sensors.gps.ground_speed, quad.sensors.gps.cog, quad.sensors.gps.eph, quad.sensors.gps.epv, quad.sensors.gps.fix, quad.sensors.gps.visible_sats, quad.sensors.imu.acc, quad.sensors.imu.gyro, quad.sensors.mag.mag_field, quad.sensors.baro.pressure, quad.sensors.baro.temperature);
+    result = send_hil_messages(time_usec, quad.state.quat, quad.state.euler_rates, quad.state.acc_b, quad.state.dcm_be, quad.state.vel_e, latlonalt, quad.sensors.gps.lat_lon_alt, quad.sensors.gps.gps_speed, quad.sensors.gps.ground_speed, quad.sensors.gps.cog, quad.sensors.gps.eph, quad.sensors.gps.epv, quad.sensors.gps.fix, quad.sensors.gps.visible_sats, quad.sensors.imu.acc, quad.sensors.imu.gyro, quad.sensors.mag.mag_field, quad.sensors.baro.pressure, quad.sensors.baro.diff_pressure, quad.sensors.baro.pressure_alt, quad.sensors.baro.temperature);
     if(result < 0)
         return result;
 
@@ -159,7 +159,7 @@ void testQuadDynamics()
         c_d[i] = C_D;
 
     init_quad(&quad, MASS, inertia, D_ARM, R_D, c_d, THRUST_TC, THRUST_HOVER_NORM * THRUST_MAX_FORCE, HOME_YAW);
-    init_quad_sensors(&quad, GPS_EPH, GPS_EPV, GPS_FIX, GPS_NUM_SATS, GPS_LAT_LON_NOISE, GPS_ALT_NOISE, GPS_SPEED_NOISE, IMU_ACC_NOISE, IMU_GYRO_NOISE, MAG_NOISE, BARO_TEMP);
+    init_quad_sensors(&quad, GPS_EPH, GPS_EPV, GPS_FIX, GPS_NUM_SATS, GPS_LAT_LON_NOISE, GPS_ALT_NOISE, GPS_SPEED_NOISE, IMU_ACC_NOISE, IMU_GYRO_NOISE, MAG_NOISE, BARO_NOISE);
 
     // Initialise wind and thrust
     // for(i = 0 ; i < 3 ; i++)
