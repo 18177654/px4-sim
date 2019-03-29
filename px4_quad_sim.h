@@ -7,7 +7,7 @@
 #define HIL 0
 #define SIL_SPEED_FACTOR 3
 
-#define SENSOR_FREQ 500
+#define SENSOR_FREQ 250
 #define GPS_FREQ 50
 
 // Global variables.

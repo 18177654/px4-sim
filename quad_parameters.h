@@ -13,22 +13,22 @@
 #define NOISE 0
 
 // Quad physical properties
-#define MASS 4.5
-#define I_XX 0.23
-#define I_YY 0.235
-#define I_ZZ 0.328
+#define MASS 1.5//4.5
+#define I_XX 0.0347563//0.23
+#define I_YY 0.0458929//0.235
+#define I_ZZ 0.0977//0.328
 
-#define D_ARM 0.49
-#define R_D 0.018
+#define D_ARM 0.47 / 2.0//0.49
+#define R_D 0.000806428//0.018
 #define C_D 0
-#define THRUST_TC 0.07
+#define THRUST_TC 0.0125//0.07
 
-#define THRUST_MAX_FORCE 4 * 3.2 * GRAVITY
+#define THRUST_MAX_FORCE 2 * MASS * GRAVITY//4 * 3.2 * GRAVITY
 #define THRUST_HOVER_NORM (MASS * GRAVITY) / (THRUST_MAX_FORCE)
 
 // Quad sensor parameters
-#define GPS_EPH 0.3
-#define GPS_EPV 0.4
+#define GPS_EPH 1.0
+#define GPS_EPV 1.0
 #define GPS_FIX 3
 #define GPS_NUM_SATS 10
 #define GPS_LAT_LON_NOISE 1e-6

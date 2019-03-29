@@ -68,8 +68,23 @@ double constrain(double val, double min, double max)
 
 void ned_to_latlonalt(double ned[3], double latlonalt[3], double home_lat, double home_lon, double home_alt)
 {
-    latlonalt[0] =  (rad2deg((ned[0]/R_EARTH)) + home_lat);
-    latlonalt[1] = (rad2deg(ned[1]/(R_EARTH*cos(deg2rad(latlonalt[0])))) + home_lon);
+    // reproject local position to gps coordinates
+    double x_rad = ned[0] / R_EARTH;    // north
+    double y_rad = ned[1] / R_EARTH;    // east
+    double c = sqrt(x_rad * x_rad + y_rad * y_rad);
+    double sin_c = sin(c);
+    double cos_c = cos(c);
+
+    if (c != 0.0) {
+        latlonalt[0] = rad2deg(asin(cos_c * sin(deg2rad(home_lat)) + (x_rad * sin_c * cos(deg2rad(home_lat))) / c));
+        latlonalt[1] = rad2deg(deg2rad(home_lon) + atan2(y_rad * sin_c, c * cos(deg2rad(home_lat)) * cos_c - x_rad * sin(home_lat) * sin_c));
+    } else {
+        latlonalt[0] = home_lat;
+        latlonalt[1] = home_lon;
+    }
+
+    // latlonalt[0] =  (rad2deg((ned[0]/R_EARTH)) + home_lat);
+    // latlonalt[1] = (rad2deg(ned[1]/(R_EARTH*cos(deg2rad(latlonalt[0])))) + home_lon);
     latlonalt[2] = (-ned[2] + home_alt);
 }
 

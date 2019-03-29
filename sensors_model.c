@@ -11,11 +11,11 @@
 // https://github.com/PX4/sitl_gazebo/blob/2e80474653bcb7808a7dfced4cf403ef607d69da/src/gazebo_mavlink_interface.cpp
 // https://github.com/PX4/sitl_gazebo/blob/2e80474653bcb7808a7dfced4cf403ef607d69da/src/geo_mag_declination.cpp
 // Set this always to the sampling in degrees for the table below
-#define SAMPLING_RES		10.0f
-#define SAMPLING_MIN_LAT	-60.0f
-#define SAMPLING_MAX_LAT	60.0f
-#define SAMPLING_MIN_LON	-180.0f
-#define SAMPLING_MAX_LON	180.0f
+#define SAMPLING_RES		10.0
+#define SAMPLING_MIN_LAT	-60.0
+#define SAMPLING_MAX_LAT	60.0
+#define SAMPLING_MIN_LON	-180.0
+#define SAMPLING_MAX_LON	180.0
 
 int get_lookup_table_index(float *val, float min, float max);
 float get_table_data(float lat, float lon, int table[13][37]);
@@ -98,9 +98,9 @@ float get_table_data(float lat, float lon, int table[13][37])
 	 * as we have no way of knowing what the closest real value
 	 * would be.
 	 */
-	if (lat < -90.0f || lat > 90.0f ||
-	    lon < -180.0f || lon > 180.0f) {
-		return 0.0f;
+	if (lat < -90.0 || lat > 90.0 ||
+	    lon < -180.0 || lon > 180.0) {
+		return 0.0;
 	}
 
 	// Round down to nearest sampling resolution
@@ -117,8 +117,8 @@ float get_table_data(float lat, float lon, int table[13][37])
 	const float data_nw = table[min_lat_index + 1][min_lon_index];
 
 	// Perform bilinear interpolation on the four grid corners
-	const float lat_scale = constrain((lat - min_lat) / SAMPLING_RES, 0.0f, 1.0f);
-	const float lon_scale = constrain((lon - min_lon) / SAMPLING_RES, 0.0f, 1.0f);
+	const float lat_scale = constrain((lat - min_lat) / SAMPLING_RES, 0.0, 1.0f);
+	const float lon_scale = constrain((lon - min_lon) / SAMPLING_RES, 0.0, 1.0f);
 
 	const float data_min = lon_scale * (data_se - data_sw) + data_sw;
 	const float data_max = lon_scale * (data_ne - data_nw) + data_nw;
@@ -189,8 +189,8 @@ void init_imu(ImuSensor *imu, double acc_noise_std_dev, double gyro_noise_std_de
 
     for(i = 0 ; i < 3 ; i++)
     {
-        imu->acc[i] = 0.0f;
-        imu->gyro[i] = 0.0f;
+        imu->acc[i] = 0.0;
+        imu->gyro[i] = 0.0;
     }
     imu->acc[2] = -GRAVITY;
 }
@@ -246,13 +246,13 @@ void calc_mag_field(double lat, double lon, double dcm_be[3][3], double mag_fiel
     inclination_rad = deg2rad(get_mag_inclination(lat, lon));
 
     // Magnetic strength (10^5xnanoTesla)
-    strength_ga = 0.01f * get_mag_strength(lat, lon);
+    strength_ga = 0.01 * get_mag_strength(lat, lon);
 
     // Magnetic filed components are calculated by http://geomag.nrcan.gc.ca/mag_fld/comp-en.php
     H = strength_ga * cos(inclination_rad);
     mag_e[0] = H * cos(declination_rad);
     mag_e[1] = H * sin(declination_rad);
-    mag_e[2] = tan(inclination_rad) * H;
+    mag_e[2] = H * tan(inclination_rad);
 
     // Magnetic field data from WMM2018 (10^5xnanoTesla)
     earth_to_body_rotation(dcm_be, mag_e, mag_field);

@@ -77,6 +77,7 @@ int main()
     double wind_vel_e[3];
     int result;
     double excess_time;
+    bool received_act;
 
     signal(SIGINT, sighandler); // Exit simulation if Ctrl-C is pressed
 
@@ -101,28 +102,35 @@ int main()
         wind_vel_e[i] = 0.0f;
 
     // Loop
+    received_act = false;
     while(result >= 0)
     {
-        // Update the physics sim with a fixed time
-        if(HIL)
-            cur_time = get_time_usec();
-        else
-            cur_time += 1000000.0/SENSOR_FREQ;
-        
-        result = advance_sim(cur_time, prev_time, wind_vel_e);
-        if(result > 0)
-            prev_time = cur_time;
-        
         // Poll for MAVLink messages: receive actuator controls from PX4 and when in HIL - send messages from autopilot to GCS and vice-versa.
         result = pollMavlinkMessage();
         if(result < 0)
             return result;
+
+        if(result == 93 || !received_act)
+        {
+            if(result == 93)
+                received_act = true;
+
+            // Update the physics sim with a fixed time
+            if(HIL)
+                cur_time = get_time_usec();
+            else
+                cur_time += 1000000.0/SENSOR_FREQ;
+
+            result = advance_sim(cur_time, prev_time, wind_vel_e);
+            if(result > 0)
+                prev_time = cur_time;
         
-        // Sleep
-        if(HIL)
-            usleep(10); // 10 us
-        else
-            usleep((1000000.0/SENSOR_FREQ)/SIL_SPEED_FACTOR);
+            // Sleep
+            if(HIL)
+                usleep(10); // 10 us
+            else
+                usleep((1000000.0/SENSOR_FREQ)/SIL_SPEED_FACTOR);
+        }
     }
 
     LOG_MSG("Simulation terminated...\n");
